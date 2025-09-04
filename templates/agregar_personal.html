@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Registro de Personal - San Felipe Usila</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style1.css') }}">
+  
+</head>
+<body>
+
+  <header>
+    <img src="{{ url_for('static', filename='img/escudomx.png') }}" class="logo left">
+    <img src="{{ url_for('static', filename='img/Logousila2.png') }}" class="logo right">
+    <h2>Formulario de Registro de Personal</h2>
+  </header>
+
+  <div class="container">
+    <main>
+      <form method="POST" action="/registrar_personal" enctype="multipart/form-data">
+        <div class="form-row">
+          <label>Nombre:</label><input type="text" name="nombre" required>
+          <label>Apellido P:</label><input type="text" name="apellido_p" required>
+        </div>
+
+        <div class="form-row">
+          <label>Apellido M:</label><input type="text" name="apellido_m" required>
+          <label>Fecha Nacimiento:</label><input type="date" name="fecha_nac" required>
+        </div>
+
+        <div class="form-row">
+          <label>Curp:</label><input type="text" name="curp" required>
+          <label>Edad:</label><input type="text" name="edad" required>
+        </div>
+
+        <div class="form-row">
+            <label>Calle:</label><input type="text" name="calle" required>
+          <label>Colonia:</label><input type="text" name="colonia" required>
+      
+        </div>
+
+        <div class="form-row">
+          <label>Puesto:</label><input type="text" name="puesto" required>
+          <label>Teléfono:</label><input type="text" name="telefono" required>
+          
+        </div>
+
+        <div class="form-row">
+            <label>Género:</label>
+          <select name="genero" required>
+            <option value="">Seleccione</option>
+            <option value="M">Masculino</option>
+            <option value="F">Femenino</option>
+          </select>
+          <label>Estatus:</label>
+          <select name="status" required>
+            <option value="Activo">Activo</option>
+            <option value="Inactivo">Inactivo</option>
+          </select>
+          
+        </div>
+
+        <div class="form-row">
+        <label>Turno:</label>
+          <select name="turno" required>
+            <option value="turno1">Turno 1 (9-14 / 16-19)</option>
+            <option value="turno2">Turno 2 (14-19)</option>
+          </select>
+          <label>Fecha Ingreso:</label>
+          <input type="date" name="fecha_ingreso" value="{{ fecha_hoy }}" required>
+        </div>
+
+        <!-- Foto del empleado -->
+        <div class="form-row" style="flex-direction:column; align-items:center;">
+          <img id="fotoEmpleado" src="{{ url_for('static', filename='img/default.png') }}" alt="Foto Empleado">
+          <input type="file" name="foto" accept="image/*">
+        </div>
+
+        <!-- Lector de huellas -->
+        <div id="lector">Esperando huella...</div>
+        <div id="mensaje"></div>
+
+        <div style="text-align:center; margin-top:20px;">
+          <button type="submit" class="btn">Registrar</button>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <script>
+    // ----------------------------
+    // Función para actualizar estado del lector de huella (simulado)
+    // ----------------------------
+    function actualizarEstadoHuella(estado, mensajeTexto="") {
+      const lector = document.getElementById("lector");
+      const mensaje = document.getElementById("mensaje");
+
+      switch(estado) {
+        case "correcta":
+          lector.style.background = "green";
+          lector.innerText = "✅ Huella OK";
+          mensaje.innerText = mensajeTexto || "Huella registrada correctamente.";
+          break;
+        case "error":
+          lector.style.background = "red";
+          lector.innerText = "❌ Error";
+          mensaje.innerText = mensajeTexto || "Error en la huella. Intente de nuevo.";
+          break;
+        case "espera":
+        default:
+          lector.style.background = "gray";
+          lector.innerText = "Esperando huella...";
+          mensaje.innerText = "";
+      }
+    }
+
+    // Inicializar en espera
+    actualizarEstadoHuella("espera");
+
+    // Demo: click para simular huella
+    document.getElementById("lector").addEventListener("click", () => {
+      const estados = ["correcta","error"];
+      const aleatorio = estados[Math.floor(Math.random()*estados.length)];
+      actualizarEstadoHuella(aleatorio);
+    });
+
+    // Poner la fecha de hoy en Fecha de Ingreso automáticamente
+    const fechaHoyInput = document.querySelector('input[name="fecha_ingreso"]');
+    if(fechaHoyInput){
+      const hoy = new Date().toISOString().split('T')[0];
+      fechaHoyInput.value = hoy;
+    }
+  </script>
+</body>
+</html>

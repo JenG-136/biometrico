@@ -1,0 +1,80 @@
+ body { 
+    font-family: Arial, sans-serif; 
+    margin:0; background:#f2f2f2; 
+}
+    header { 
+        background: #FFD700; 
+        height: 120px; 
+        position: relative; }
+
+    header .logo { 
+        position: absolute; 
+        top: 10px; 
+        width: 80px; }
+    header .logo.left { 
+        left: 20px; 
+    }
+    header .logo.right { 
+        right: 20px; 
+    }
+    header h2 { 
+        text-align:center; 
+        line-height:100px; 
+        margin:0; }
+
+    .container { 
+        display: flex; 
+        padding: 20px; 
+    }
+    main { 
+        flex:1; background:white; 
+        padding:15px; 
+        border-radius:5px; 
+    }
+    .form-row {
+    display: flex;
+    margin-bottom: 15px;  
+    gap: 20px;            /* espacio horizontal entre columnas */
+}
+
+.form-row label {
+    width: 120px;          
+    padding-right: 5px;
+    font-weight: bold;
+}
+
+.form-row input, .form-row select {
+    flex: 1;
+    padding: 5px;
+}
+
+
+    #lector {
+      width:150px; 
+      height:150px; 
+      background:gray; 
+      border-radius:10px;
+      display:flex; 
+      align-items:center; 
+      justify-content:center; 
+      color:white;
+      font-weight:bold; 
+      margin:10px 0;
+    }
+
+    #mensaje { margin-bottom:20px; 
+        text-align:center; 
+        font-weight:bold; }
+
+    #fotoEmpleado { width:120px; 
+        height:120px; 
+        border:1px solid #ccc; 
+        object-fit:cover; 
+        margin-bottom:10px; }
+
+    .btn { padding:10px 20px; 
+        background:#28a745; 
+        color:white; 
+        border:none; 
+        border-radius:5px; 
+        cursor:pointer; }

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Sistema Biométrico - San Felipe Usila</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <!-- Encabezado -->
+  <header>
+    <img src="{{ url_for('static', filename='img/escudomx.png') }}" 
+         alt="Logo Escudo" class="logo left">
+    <img src="{{ url_for('static', filename='img/Logousila2.png') }}" 
+         alt="Logo Usila" class="logo right">
+  </header>
+
+  <!-- Contenedor principal -->
+  <div class="container">
+    <!-- Barra lateral -->
+    <aside>
+      <button onclick="abrirModal('ver_registros')">Ver Registros</button>
+      <button onclick="abrirModal('agregar_personal')">Agregar Personal</button>
+      <button onclick="abrirModal('generar_reporte')">Generar Reporte</button>
+      <button onclick="abrirModal('ver_personal')">Ver Personal</button>
+      <button onclick="solicitarSalir()">Salir</button>
+    </aside>
+
+    <!-- Área central -->
+    <main>
+      <h3>Coloque su huella</h3>
+      <div id="lector" onclick="simularHuella()"></div>
+      <div id="mensaje"></div>
+    </main>
+  </div>
+
+  <!-- Modal de contraseña -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <form method="POST" action="/admin">
+        <input type="hidden" id="accion" name="accion" value="">
+        <label>Ingrese contraseña de administrador:</label>
+        <input type="password" name="password" id="password" required>
+        <img id="togglePassword" src="{{ url_for('static', filename='icon/ojo.png') }}" 
+             style="cursor:pointer; width:20px; margin-left:5px;">
+        <div style="margin-top: 10px;">
+          <button type="submit" onclick="setAccion()">Aceptar</button>
+          <button type="button" onclick="cerrarModal()">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <img src="{{ url_for('static', filename='img/footer.png') }}" 
+         alt="Imagen Footer" class="footer-img">
+  </footer>
+
+  <!-- Script -->
+  <script>
+    let intentos = 0;
+    let accionActual = "";
+
+    // Simular lector de huella
+    function simularHuella() {
+      const lector = document.getElementById("lector");
+      const mensaje = document.getElementById("mensaje");
+      intentos++;
+      if (intentos % 2 === 1) {
+        lector.style.background = "green";
+        mensaje.innerText = "Huella registrada correctamente ✅";
+      } else {
+        lector.style.background = "red";
+        mensaje.innerText = "Error en la huella ❌. Intente de nuevo.";
+      }
+    }
+
+    // Abrir modal con acción
+    function abrirModal(accion) {
+      accionActual = accion;
+      document.getElementById("accion").value = "";  // limpiar cada vez
+      document.getElementById("password").value = ""; // limpiar contraseña
+      document.getElementById("password").type = "password"; // tipo password
+      document.getElementById("togglePassword").src = "{{ url_for('static', filename='icon/ojo.png') }}"; // ojo abierto
+      document.getElementById("modal").style.display = "block";
+    }
+
+    // Guardar acción antes de enviar
+    function setAccion() {
+      document.getElementById("accion").value = accionActual;
+    }
+
+    // Cerrar modal y limpiar campo
+    function cerrarModal() {
+      document.getElementById("modal").style.display = "none";
+      document.getElementById("password").value = "";
+    }
+
+    // Mostrar/ocultar contraseña
+    document.getElementById("togglePassword").addEventListener("click", function () {
+      const passwordInput = document.getElementById("password");
+      if (passwordInput.type === "password") {
+        passwordInput.type = "text";
+        this.src = "{{ url_for('static', filename='icon/visible.png') }}"; // icono ojo cerrado
+      } else {
+        passwordInput.type = "password";
+        this.src = "{{ url_for('static', filename='icon/ojo.png') }}"; // icono ojo abierto
+      }
+    });
+
+    function solicitarSalir() {
+      alert("Cerrar sesión o salir de la aplicación");
+    }
+  </script>
+</body>
+</html>
