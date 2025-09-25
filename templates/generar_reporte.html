@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Generar Reporte</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style5.css') }}">
+</head>
+<body>
+    <!-- Encabezado -->
+    <header>
+        <div class="header-content">
+            <!-- Logo izquierdo -->
+            <img src="{{ url_for('static', filename='img/escudomx.png') }}" class="logo left" alt="Logo Escudo">
+
+            <!-- Título centrado -->
+            <h2>Generar Reporte</h2>
+
+            <!-- Logo derecho -->
+            <img src="{{ url_for('static', filename='img/Logousila2.png') }}" class="logo right" alt="Logo Usila">
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- Botón para volver al index -->
+        <div class="volver-container">
+            <a href="{{ url_for('home') }}" class="btn btn-volver">⬅ Volver a Inicio</a>
+        </div>
+
+        <!-- Selección de tipo de reporte -->
+        <form method="get" action="{{ url_for('generar_reporte') }}">
+            <label for="tipo_reporte">Tipo de reporte:</label>
+            <select name="tipo_reporte" id="tipo_reporte" onchange="this.form.submit()">
+                <option value="diario" {% if tipo_reporte=='diario' %}selected{% endif %}>Diario</option>
+                <option value="quincenal" {% if tipo_reporte=='quincenal' %}selected{% endif %}>Quincenal</option>
+                <option value="mensual" {% if tipo_reporte=='mensual' %}selected{% endif %}>Mensual</option>
+            </select>
+        </form>
+
+        <br>
+
+        <!-- Selección de fecha/mes según tipo de reporte -->
+        <form method="get" action="{{ url_for('generar_reporte') }}">
+            <input type="hidden" name="tipo_reporte" value="{{ tipo_reporte }}">
+
+            {% if tipo_reporte == 'diario' %}
+                <label for="fecha">Fecha:</label>
+                <input type="date" name="fecha" id="fecha" value="{{ fecha_actual }}" required>
+            {% elif tipo_reporte == 'quincenal' %}
+                <label for="quincena">Quincena:</label>
+                <select name="quincena" id="quincena">
+                    <option value="1">1-15</option>
+                    <option value="2">16-fin de mes</option>
+                </select>
+                <label for="mes_quincena">Mes:</label>
+                <input type="number" name="mes_quincena" min="1" max="12" value="{{ fecha_actual.month }}" required>
+            {% elif tipo_reporte == 'mensual' %}
+                <label for="mes_mensual">Mes:</label>
+                <input type="number" name="mes_mensual" min="1" max="12" value="{{ fecha_actual.month }}" required>
+            {% endif %}
+
+            <button type="submit">Generar</button>
+        </form>
+
+        <br>
+
+        <!-- Tabla del reporte -->
+        <table>
+            <thead>
+                <tr>
+                    <th>Empleado</th>
+                    <th>Días asistidos</th>
+                    <th>Horas extra</th>
+                    <th>Permisos</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in reporte %}
+                <tr>
+                    <td>{{ r.nombre }} {{ r.apellido_p }} {{ r.apellido_m }}</td>
+                    <td>{{ r.dias_asistidos }}</td>
+                    <td>{{ r.horas_extra }}</td>
+                    <td>{{ r.permisos }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

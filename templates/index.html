@@ -78,10 +78,10 @@
     // Abrir modal con acción
     function abrirModal(accion) {
       accionActual = accion;
-      document.getElementById("accion").value = "";  // limpiar cada vez
+      document.getElementById("accion").value = "";  // limpiar
       document.getElementById("password").value = ""; // limpiar contraseña
-      document.getElementById("password").type = "password"; // tipo password
-      document.getElementById("togglePassword").src = "{{ url_for('static', filename='icon/ojo.png') }}"; // ojo abierto
+      document.getElementById("password").type = "password"; // tipo de password
+      document.getElementById("togglePassword").src = "{{ url_for('static', filename='icon/ojo.png') }}"; // opcion para revelar la contraseña 
       document.getElementById("modal").style.display = "block";
     }
 

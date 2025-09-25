@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Editar Empleado</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style3.css') }}">
+</head>
+<body>
+  <div class="detalle-container">
+    <!-- Logos laterales -->
+    <img src="{{ url_for('static', filename='img/escudomx.png') }}" class="logo logo-left" alt="Logo Izquierdo">
+    <img src="{{ url_for('static', filename='img/LogoUsila2.png') }}" class="logo logo-right" alt="Logo Derecho">
+    
+    <h2>Editar Empleado</h2>
+    <br>
+
+    <form method="POST" action="{{ url_for('editar_personal', id=empleado[0]) }}" enctype="multipart/form-data">
+      <!-- Foto y Nombre -->
+      <div class="info-top">
+        <div class="foto-container">
+          {% if empleado[15] %}
+            <img src="{{ url_for('static', filename='uploads/' ~ empleado[15]) }}" alt="Foto del Empleado">
+          {% else %}
+            <p>Sin foto</p>
+          {% endif %}
+          <br><br>
+          <input type="file" name="foto" accept="image/*">
+        </div>
+        <div class="nombre-container">
+          <h3>
+            <input type="text" name="nombre" value="{{ empleado[1] }}" required>
+            <input type="text" name="apellido_p" value="{{ empleado[2] }}" required>
+            <input type="text" name="apellido_m" value="{{ empleado[3] }}" required>
+          </h3>
+          <p>ID: {{ empleado[0] }}</p>
+        </div>
+      </div>
+
+      <!-- Datos en tabla (editables) -->
+      <table class="datos-tabla">
+        <tr>
+          <td><strong>Fecha de Nacimiento:</strong></td>
+          <td><input type="date" name="fecha_nac" value="{{ empleado[4] }}" required></td>
+        </tr>
+        <tr>
+          <td><strong>CURP:</strong></td>
+          <td><input type="text" name="curp" value="{{ empleado[5] }}" required></td>
+        </tr>
+        <tr>
+          <td><strong>Edad:</strong></td>
+          <td><input type="number" name="edad" value="{{ empleado[6] }}" required></td>
+        </tr>
+        <tr>
+          <td><strong>Calle:</strong></td>
+          <td><input type="text" name="calle" value="{{ empleado[7] }}" required></td>
+        </tr>
+        <tr>
+          <td><strong>Colonia:</strong></td>
+          <td><input type="text" name="colonia" value="{{ empleado[8] }}" required></td>
+        </tr>
+        <tr>
+          <td><strong>Puesto:</strong></td>
+          <td><input type="text" name="puesto" value="{{ empleado[9] }}" required></td>
+        </tr>
+        <tr>
+          <td><strong>Teléfono:</strong></td>
+          <td><input type="text" name="telefono" value="{{ empleado[10] }}" required></td>
+        </tr>
+        <tr>
+          <td><strong>Género:</strong></td>
+          <td>
+            <select name="genero" required>
+              <option value="M" {% if empleado[11]=='M' %}selected{% endif %}>Masculino</option>
+              <option value="F" {% if empleado[11]=='F' %}selected{% endif %}>Femenino</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Estatus:</strong></td>
+          <td>
+            <select name="estatus" required>
+              <option value="Activo" {% if empleado[12]=='Activo' %}selected{% endif %}>Activo</option>
+              <option value="Inactivo" {% if empleado[12]=='Inactivo' %}selected{% endif %}>Inactivo</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Turno:</strong></td>
+          <td>
+            <select name="turno" required>
+              <option value="turno1" {% if empleado[13]=='turno1' %}selected{% endif %}>Turno 1 (9-14 / 16-19)</option>
+              <option value="turno2" {% if empleado[13]=='turno2' %}selected{% endif %}>Turno 2 (14-19)</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Fecha de Ingreso:</strong></td>
+          <td><input type="date" name="fecha_ingreso" value="{{ empleado[14] }}" required></td>
+        </tr>
+      </table>
+
+      <!-- Huella Digital (solo visual, no editable aquí) -->
+      <div class="huella-container">
+        <h4>Huella Digital</h4>
+        {% if empleado[16] %}
+          <img src="{{ url_for('static', filename='uploads/huellas/' ~ empleado[16]) }}" alt="Huella Digital">
+        {% else %}
+          <p>Sin huella registrada</p>
+        {% endif %}
+      </div>
+
+      <br>
+
+      <!-- Botón Guardar -->
+      <div style="text-align:center; margin-top:20px;">
+        <button type="submit" class="btn">Guardar Cambios</button>
+      </div>
+    </form>
+
+    <br>
+    <a href="{{ url_for('ver_personal') }}" class="btn-volver">Volver</a>
+  </div>
+</body>
+</html>

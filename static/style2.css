@@ -1,0 +1,260 @@
+/* ================================
+   Estilos generales
+================================ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background: #f7f9fc;
+  padding: 20px;
+  color: #333;
+}
+
+/* ================================
+   Encabezado
+================================ */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background-color: #f0f0f0;
+  border-bottom: 2px solid #ccc;
+  margin-bottom: 20px;
+}
+
+header h2 {
+  text-align: center;
+  flex: 1;
+  font-size: 24px;
+  margin: 0;
+}
+
+.btn-volver {
+  background-color: #ACAF50;
+  color: white;
+  padding: 8px 15px;
+  text-decoration: none;
+  border-radius: 5px;
+  font-size: 14px;
+  transition: background 0.3s ease;
+}
+
+.btn-volver:hover {
+  background-color: #45a049;
+}
+
+/* ================================
+   Fila seleccionada
+================================ */
+.fila-seleccionada {
+  background-color: #d4edda !important;
+  font-weight: bold;
+  transition: background 0.3s ease;
+}
+
+/* ================================
+   Logos en el header
+================================ */
+.logo {
+  height: 40px;
+  width: auto;
+}
+
+.logo.left {
+  margin-right: auto;
+}
+
+.logo.right {
+  margin-left: auto;
+}
+
+/* ================================
+   Tabla de personal
+================================ */
+table {
+  width: 90%;
+  margin: 0 auto;
+  border-collapse: collapse;
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+thead {
+  background: #FFD700;
+  color: rgb(12, 12, 12);
+}
+
+thead th {
+  padding: 10px;
+  text-align: center;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+}
+
+tbody tr {
+  border-bottom: 1px solid #ddd;
+  transition: background 0.3s ease;
+}
+
+tbody tr:hover {
+  background: #f1f5ff;
+}
+
+tbody td {
+  padding: 8px;
+  text-align: center;
+  font-size: 13px;
+  color: #444;
+}
+
+/* ================================
+   Imagen de la tabla (Foto de empleado)
+================================ */
+tbody td img {
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  max-width: 40px;   /* Tamaño reducido */
+  max-height: 40px;  /* Tamaño reducido */
+  object-fit: cover;
+  transition: transform 0.2s ease;
+  cursor: pointer;
+}
+
+tbody td img:hover {
+  transform: scale(1.15);
+}
+
+/* Íconos de acción (Ver, Editar, Eliminar) */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  margin: 0 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-icon img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.btn-icon:hover {
+  transform: scale(1.2);
+  transition: transform 0.2s ease;
+}
+
+/* Efecto especial solo para eliminar */
+.btn-icon.eliminar:hover img {
+  filter: drop-shadow(0 0 4px red);
+}
+
+
+
+/* ================================
+   Modal de imagen
+================================ */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  justify-content: center;
+  align-items: center;
+}
+
+.modal img {
+  max-width: 60%;
+  max-height: 80%;
+  border: 3px solid #fff;
+  border-radius: 10px;
+  animation: aparecer 0.3s ease;
+}
+
+.modal .cerrar {
+  position: absolute;
+  top: 20px;
+  right: 30px;
+  color: #fff;
+  font-size: 30px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.modal .cerrar:hover {
+  color: red;
+}
+
+/* Animación al abrir el modal */
+@keyframes aparecer {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ================================
+   Responsive
+================================ */
+@media (max-width: 768px) {
+  table {
+    width: 100%;
+  }
+
+  thead {
+    display: none;
+  }
+
+  tbody td {
+    display: block;
+    text-align: right;
+    padding-left: 50%;
+    position: relative;
+  }
+
+  tbody td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 10px;
+    width: 50%;
+    padding-left: 10px;
+    font-weight: bold;
+    text-align: left;
+  }
+
+  tbody tr {
+    margin-bottom: 15px;
+    display: block;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Modal en pantallas pequeñas */
+  .modal img {
+    max-width: 90%;
+    max-height: 80%;
+  }
+}

@@ -22,6 +22,19 @@
         line-height:100px; 
         margin:0; }
 
+    .btn-volver{
+background-color: #ACAF50;
+  color: white;
+  padding: 8px 15ps;
+  text-decoration: none;
+  border-radius: 5px;
+  font-size: 10px;
+}
+
+    .btn-volver:hover{
+  background-color: #45a049;
+}
+
     .container { 
         display: flex; 
         padding: 20px; 

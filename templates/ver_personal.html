@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Lista de Personal</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style2.css') }}">
+</head>
+<body>
+
+  <!-- Encabezado con logos -->
+  <header>
+    <img src="{{ url_for('static', filename='img/escudomx.png') }}" class="logo left" alt="Escudo MX">
+    <h2>Lista de Personal Registrado</h2>
+    <img src="{{ url_for('static', filename='img/Logousila2.png') }}" class="logo right" alt="Logo Usila">
+  </header>
+
+  <!-- Botón para volver al index -->
+  <div style="margin: 20px;">
+    <a href="{{ url_for('home') }}" class="btn btn-volver">⬅ Volver a Inicio</a>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nombre Completo</th>
+        <th>CURP</th>
+        <th>Teléfono</th>
+        <th>Puesto</th>
+        <th>Foto</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in personal %}
+      <tr>
+        <td>{{ loop.index }}</td> <!-- Numeración consecutiva -->
+        <td>{{ p[1] }} {{ p[2] }} {{ p[3] }}</td>
+        <td>{{ p[5] }}</td>
+        <td>{{ p[10] }}</td>
+        <td>{{ p[9] }}</td>
+        <td>
+          {% if p[15] %}
+            <img src="{{ url_for('static', filename='uploads/' ~ p[15]) }}" 
+                 alt="Foto Empleado" 
+                 class="foto-empleado" 
+                 onclick="abrirModal(this)">
+          {% else %}
+            Sin foto
+          {% endif %}
+        </td>
+        <td class="acciones">
+          <!-- Botón Ver -->
+          <a href="{{ url_for('detalle_personal', id=p[0]) }}" class="btn-icon" title="Ver">
+            <img src="{{ url_for('static', filename='icon/ver.png') }}" alt="Ver">
+          </a>
+
+          <!-- Botón Editar -->
+          <a href="{{ url_for('editar_personal', id=p[0]) }}" class="btn-icon" title="Editar">
+            <img src="{{ url_for('static', filename='icon/editar.png') }}" alt="Editar">
+          </a>
+
+        
+         <!-- Botón Eliminar -->
+<form method="POST" action="{{ url_for('eliminar_personal', id=p[0]) }}" 
+      onsubmit="return confirm('¿Seguro que deseas eliminar este empleado?');" style="display:inline;">
+  <button type="submit" class="btn-icon eliminar" title="Eliminar">
+    <img src="{{ url_for('static', filename='icon/eliminar.png') }}" alt="Eliminar">
+  </button>
+</form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Modal para mostrar imagen ampliada -->
+  <div id="modalImagen" class="modal" onclick="cerrarModal(event)">
+    <span class="cerrar" onclick="cerrarModal(event)">&times;</span>
+    <img id="imagenModal" src="" alt="Imagen ampliada">
+  </div>
+
+  <script>
+    // Abrir modal con la imagen seleccionada
+    function abrirModal(imgElement) {
+      const modal = document.getElementById("modalImagen");
+      const modalImg = document.getElementById("imagenModal");
+      modal.style.display = "flex";
+      modalImg.src = imgElement.src;
+    }
+
+    // Cerrar modal
+    function cerrarModal(event) {
+      const modal = document.getElementById("modalImagen");
+      if (event.target === modal || event.target.classList.contains("cerrar")) {
+        modal.style.display = "none";
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Detalles del Empleado</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style3.css') }}">
+</head>
+<body>
+  <div class="detalle-container">
+    <!-- Logos laterales -->
+    <img src="{{ url_for('static', filename='img/escudomx.png') }}" class="logo logo-left" alt="Logo Izquierdo">
+    <img src="{{ url_for('static', filename='img/LogoUsila2.png') }}" class="logo logo-right" alt="Logo Derecho">
+    
+    <h2>Detalles del Empleado</h2>
+<br>
+
+    <!-- Foto y Nombre -->
+    <div class="info-top">
+      <div class="foto-container">
+        {% if empleado[15] %}
+          <img src="{{ url_for('static', filename='uploads/' ~ empleado[15]) }}" alt="Foto del Empleado">
+        {% else %}
+          <p>Sin foto</p>
+        {% endif %}
+      </div>
+      <div class="nombre-container">
+        <h3>{{ empleado[1] }} {{ empleado[2] }} {{ empleado[3] }}</h3>
+        <p>ID: {{ empleado[0] }}</p>
+      </div>
+    </div>
+
+    <!-- Datos en tabla -->
+    <table class="datos-tabla">
+      <tr>
+        <td><strong>Fecha de Nacimiento:</strong></td>
+        <td>{{ empleado[4] }}</td>
+      </tr>
+      <tr>
+        <td><strong>CURP:</strong></td>
+        <td>{{ empleado[5] }}</td>
+      </tr>
+      <tr>
+        <td><strong>Edad:</strong></td>
+        <td>{{ empleado[6] }}</td>
+      </tr>
+      <tr>
+        <td><strong>Calle:</strong></td>
+        <td>{{ empleado[7] }}</td>
+      </tr>
+      <tr>
+        <td><strong>Colonia:</strong></td>
+        <td>{{ empleado[8] }}</td>
+      </tr>
+      <tr>
+        <td><strong>Puesto:</strong></td>
+        <td>{{ empleado[9] }}</td>
+      </tr>
+      <tr>
+        <td><strong>Teléfono:</strong></td>
+        <td>{{ empleado[10] }}</td>
+      </tr>
+      <tr>
+        <td><strong>Género:</strong></td>
+        <td>{{ empleado[11] }}</td>
+      </tr>
+      <tr>
+        <td><strong>Estatus:</strong></td>
+        <td>
+          {{ empleado[12] }}
+          <span class="status-indicator {% if empleado[12] == 'Activo' %}active{% else %}inactive{% endif %}"></span>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Turno:</strong></td>
+        <td>{{ empleado[13] }}</td>
+      </tr>
+      <tr>
+        <td><strong>Fecha de Ingreso:</strong></td>
+        <td>{{ empleado[14] }}</td>
+      </tr>
+    </table>
+
+    <!-- Huella Digital -->
+    <div class="huella-container">
+      <h4>Huella Digital</h4>
+      {% if empleado[16] %}
+        <img src="{{ url_for('static', filename='uploads/huellas/' ~ empleado[16]) }}" alt="Huella Digital">
+      {% else %}
+        <p>Sin huella registrada</p>
+      {% endif %}
+    </div>
+
+    <br>
+    <a href="{{ url_for('ver_personal') }}" class="btn-volver">Volver</a>
+  </div>
+</body>
+</html>

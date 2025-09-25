@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ver Registros - Sistema Biométrico</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style4.css') }}">
+</head>
+<body>
+  <header style="position:relative;">
+    <img src="{{ url_for('static', filename='img/escudomx.png') }}" class="logo left" alt="Logo Escudo">
+    <img src="{{ url_for('static', filename='img/Logousila2.png') }}" class="logo right" alt="Logo Usila">
+    
+    <!-- Fecha y hora de México -->
+    <div id="fechaHora" style="position:absolute; top:10px; left:50%; transform:translateX(-50%); font-weight:bold;"></div>
+  </header>
+
+  <div class="container">
+    <!-- Botón de regresar -->
+    <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+      <a href="{{ url_for('home') }}" class="btn">⬅ Volver al Inicio</a>
+      <!--botno de registra el permiso justificado-->
+      <button onclick="abrirModalViaje()" class="btn" style="background: #527a8b; color: white;"> Registrar Permiso justificado </button>
+    </div>
+
+
+
+    <h2>Registros de Asistencia - {{ fecha_actual }}</h2>
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Nombre Completo</th>
+      <th>Entrada 9:00</th>
+      <th>Salida 14:00</th>
+      <th>Entrada 16:00</th>
+      <th>Salida 19:00</th>
+      <th>Horas Extra</th>
+      <th>Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for registro in registros %}
+      <tr>
+        <td>{{ registro.id }}</td>
+        <td>{{ registro.nombre }} {{ registro.apellido_p }} {{ registro.apellido_m }}</td>
+        <td>{{ registro.entrada_manana }}</td>
+        <td>{{ registro.salida_comida }}</td>
+        <td>{{ registro.entrada_tarde }}</td>
+        <td>{{ registro.salida_tarde }}</td>
+        <td>{{ registro.horas_extra }}</td>
+        <td>
+          <button onclick="abrirModalEditar({{ registro.id }})">Editar</button>
+          <button onclick="abrirModalExtra({{ registro.id }})">Agregar Extra</button>
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+  </div>
+
+  <!-- Modal para registrar los permiso justificado-->
+   <div id="modalViaje" class="modal" style="display:none;">
+    <div class="modal-content" style="width: 500px; padding: 20px;">
+      <form method="post" action="/registrar_viaje">
+        <h3 style="text-align: center;">Justificacion de Permiso</h3>
+
+        <label>Empleado:</label>
+<select name="empleado_id" id="selectEmpleado" required>
+  <option value="" disabled selected>Seleccione un empleado</option>
+  {% for e in personal %}
+    <option value="{{ e[0] }}">
+      {{ e[1] }} {{ e[2] }} {{ e[3] }} - {{ e[9] }}
+    </option>
+  {% endfor %}
+</select>
+
+<br><br>
+
+        <!-- Datos automáticos -->
+      <div id="datosEmpleado" style="background:#f2f2f2; padding:10px; border-radius:8px; display:none;">
+        <p><strong>Nombre completo:</strong> <span id="nombreEmpleado"></span></p>
+        <p><strong>Puesto:</strong> <span id="puestoEmpleado"></span></p>
+      </div>
+      <br><br>
+
+
+       <!-- Fecha de justificación -->
+      <label><strong>Fecha:</strong></label>
+      <input type="date" name="fecha" required style="width:100%; padding:5px;">
+      <br><br>
+
+      <!-- Motivo de la justificacion-->
+      <label><strong>Motivo:</strong></label>
+      <select name="motivo" required style="width:100%; padding:5px;">
+        <option value="viaje">Viaje de Trabajo</option>
+        <option value="enfermedad">Enfermedad</option>
+        <option value="otro">Otro</option>
+      </select>
+      <br><br>
+      
+      <!-- Botones -->
+        <div style="margin-top: 10px; text-align: center;">
+          <button type="submit" style="padding: 8px 15px; background: #527a8b; color: white; border: none; border-radius: 5px;">Guardar</button>
+          <button type="button" onclick="cerrarModalViaje()" style="padding: 8px 15px; background: #ccc; border: none; border-radius: 5px;">Cancelar</button>
+        </div>
+      </form>
+    </div>
+   </div>
+
+
+  <!-- Modal Editar -->
+  <div id="modalEditar" class="modal" style="display:none;">
+    <div class="modal-content">
+      <form method="POST" action="/editar_registro">
+        <input type="hidden" id="editar_id" name="id">
+        <label>Entrada 9:00:</label>
+        <input type="time" name="entrada_manana" id="entrada_manana"><br>
+        <label>Salida 14:00:</label>
+        <input type="time" name="salida_comida" id="salida_comida"><br>
+        <label>Entrada 16:00:</label>
+        <input type="time" name="entrada_tarde" id="entrada_tarde"><br>
+        <label>Salida 19:00:</label>
+        <input type="time" name="salida_tarde" id="salida_tarde"><br>
+        <div style="margin-top:10px; text-align:center;">
+          <button type="submit">Guardar</button>
+          <button type="button" onclick="cerrarModalEditar()">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Agregar Horas Extra -->
+  <div id="modalExtra" class="modal" style="display:none;">
+    <div class="modal-content">
+      <form method="POST" action="/agregar_extra">
+        <input type="hidden" id="extra_id" name="id">
+        <label>Horas Extra:</label>
+        <input type="number" name="horas_extra" id="horas_extra" min="1"><br>
+        <div style="margin-top:10px; text-align:center;">
+          <button type="submit">Agregar</button>
+          <button type="button" onclick="cerrarModalExtra()">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Funciones para mostrar modales centrados
+    function abrirModalEditar(id) {
+      document.getElementById('editar_id').value = id;
+      document.getElementById('modalEditar').style.display = 'flex';
+    }
+    function cerrarModalEditar() { document.getElementById('modalEditar').style.display = 'none'; }
+
+    function abrirModalExtra(id) {
+      document.getElementById('extra_id').value = id;
+      document.getElementById('modalExtra').style.display = 'flex';
+    }
+    function cerrarModalExtra() { document.getElementById('modalExtra').style.display = 'none'; }
+
+    // Función para mostrar fecha y hora de México
+    function actualizarFechaHora() {
+      const opciones = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true,
+        timeZone: 'America/Mexico_City'
+      };
+      const ahora = new Date();
+      const fechaHoraTexto = ahora.toLocaleString('es-MX', opciones);
+      document.getElementById('fechaHora').innerText = fechaHoraTexto;
+    }
+
+    // Inicializar y actualizar cada minuto
+    actualizarFechaHora();
+    setInterval(actualizarFechaHora, 60000);
+
+
+    //justificacion de permiso de trabajo
+    //abrir modal
+    function abrirModalViaje() {
+      document.getElementById('modalViaje').style.display = 'flex';
+    }
+    //para cerrar modal
+    function cerrarModalViaje() {
+      document.getElementById('modalViaje').style.display = 'none';
+    }
+
+    //mostrar datos del empleado seleccionado
+    function mostrarDatosEmpleados(){
+      const select = document.getElementById('selectEmpleado');
+      const opcion = select.options[select.selectedIndex];
+
+      const nombre = opcion.getAttribute('data-nombre');
+      const puesto = opcion.getAttribute('data-puesto');
+
+      if(nombre && puesto) {
+        document.getElementById('datosEmpleado').style.display = 'block';
+        document.getElementById('nombreEmpleado').textContent = nombre;
+        document.getElementById('puestoEmpleado').textContent = puesto;
+      } else{
+        document.getElementById('datosEmpleado').style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>
