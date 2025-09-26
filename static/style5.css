@@ -100,9 +100,9 @@ button:hover {
     background-color: #45a049;
 }
 
-/* Tabla */
+/* Tablas */
 table {
-    width: 90%;
+    width: 95%;
     margin: 0 auto 30px auto;
     border-collapse: collapse;
     background-color: #fff;
@@ -118,6 +118,11 @@ table th, table td {
 table th {
     background-color: #4CAF50;
     color: white;
+    font-size: 15px;
+}
+
+table td {
+    font-size: 14px;
 }
 
 table tr:nth-child(even) {
@@ -126,4 +131,125 @@ table tr:nth-child(even) {
 
 table tr:hover {
     background-color: #e0f7e0;
+}
+
+/* Contenedor de calendario */
+.calendario-container {
+    margin-top: 20px;
+    text-align: center;
+}
+
+/* Grid de días de la semana */
+.calendario-dias-semana {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    max-width: 500px;
+    margin: 0 auto 5px auto;
+    font-weight: bold;
+}
+
+/* Grid de los días del mes */
+.calendario-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr); /* 7 días de la semana */
+    gap: 8px;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.calendario-dia {
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: bold;
+    color: rgb(251, 251, 254);
+    text-align: center;
+    font-size: 14px;
+    box-shadow: 0px 1px 3px rgba(0,0,0,0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    background-color: #2196F3; /* Azul por defecto */
+}
+
+.calendario-dia:hover {
+    transform: translateY(-2px);
+    box-shadow: 0px 4px 6px rgba(0,0,0,0.3);
+}
+
+.calendario-dia.asistio {
+    background-color: #4CAF50; /* Verde: asistió */
+}
+
+.calendario-dia.falta {
+    background-color: #F44336; /* Rojo: no asistió */
+}
+
+.calendario-dia.permiso {
+    background-color: #FFC107; /* Amarillo: permiso justificado */
+    color: #333; /* Texto más legible sobre amarillo */
+}
+
+/* Ajuste tabla para reporte quincenal/mensual */
+table {
+    width: 95%;
+}
+
+table th {
+    font-size: 15px;
+}
+
+table td {
+    font-size: 14px;
+}
+
+/* Modal para mostrar empleados por día */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 5% auto;           /* Más cerca de la parte superior */
+    padding: 25px 30px;        /* Más espacio interno */
+    border-radius: 10px;
+    width: 600px;              /* Más ancho que antes */
+    max-height: 500px;         /* Más alto que antes */
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0px 5px 15px rgba(0,0,0,0.3);
+}
+
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    position: absolute;
+    top: 10px;
+    right: 20px;
+}
+
+.close:hover, .close:focus { color: black; }
+
+/* Lista de empleados dentro del modal */
+#listaEmpleados {
+    list-style-type: disc;
+    padding-left: 20px;
+    margin-top: 15px;
+    text-align: left;
+}
+
+#modalFecha {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 10px;
 }

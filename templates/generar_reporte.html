@@ -1,90 +1,216 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Generar Reporte</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style5.css') }}">
+  <meta charset="UTF-8">
+  <title>Generar Reporte</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style5.css') }}">
+
 </head>
 <body>
-    <!-- Encabezado -->
-    <header>
-        <div class="header-content">
-            <!-- Logo izquierdo -->
-            <img src="{{ url_for('static', filename='img/escudomx.png') }}" class="logo left" alt="Logo Escudo">
+<header>
+  <div class="header-content">
+    <img src="{{ url_for('static', filename='img/escudomx.png') }}" class="logo left" alt="Logo Escudo">
+    <h2>Generar Reporte</h2>
+    <img src="{{ url_for('static', filename='img/Logousila2.png') }}" class="logo right" alt="Logo Usila">
+  </div>
+</header>
 
-            <!-- Título centrado -->
-            <h2>Generar Reporte</h2>
+<div class="container">
+  <div class="volver-container">
+    <a href="{{ url_for('home') }}" class="btn btn-volver">⬅ Volver a Inicio</a>
+  </div>
 
-            <!-- Logo derecho -->
-            <img src="{{ url_for('static', filename='img/Logousila2.png') }}" class="logo right" alt="Logo Usila">
-        </div>
-    </header>
+  <form method="get" action="{{ url_for('generar_reporte') }}">
+    <label for="tipo_reporte">Tipo de reporte:</label>
+    <select name="tipo_reporte" id="tipo_reporte" onchange="this.form.submit()">
+      <option value="diario" {% if tipo_reporte == 'diario' %}selected{% endif %}>Diario</option>
+      <option value="quincenal" {% if tipo_reporte == 'quincenal' %}selected{% endif %}>Quincenal</option>
+      <option value="mensual" {% if tipo_reporte == 'mensual' %}selected{% endif %}>Mensual</option>
+    </select>
 
-    <div class="container">
+    {% if tipo_reporte == 'diario' %}
+      <label>Mes:</label>
+      <select name="mes" onchange="this.form.submit()">
+        {% for m in range(1,13) %}
+          <option value="{{m}}" {% if m == mes %}selected{% endif %}>{{m}}</option>
+        {% endfor %}
+      </select>
+      <label>Año:</label>
+      <input type="number" name="year" min="2023" max="2030" value="{{year}}" onchange="this.form.submit()">
+    {% else %}
+      <label>Mes:</label>
+      <input type="number" name="mes" min="1" max="12" value="{{mes}}" onchange="this.form.submit()">
+      {% if tipo_reporte == 'quincenal' %}
+        <label>Quincena:</label>
+        <select name="quincena" onchange="this.form.submit()">
+          <option value="1" {% if quincena == 1 %}selected{% endif %}>1-15</option>
+          <option value="2" {% if quincena == 2 %}selected{% endif %}>16-fin de mes</option>
+        </select>
+      {% endif %}
+    {% endif %}
+  </form>
 
-        <!-- Botón para volver al index -->
-        <div class="volver-container">
-            <a href="{{ url_for('home') }}" class="btn btn-volver">⬅ Volver a Inicio</a>
-        </div>
+  <hr>
 
-        <!-- Selección de tipo de reporte -->
-        <form method="get" action="{{ url_for('generar_reporte') }}">
-            <label for="tipo_reporte">Tipo de reporte:</label>
-            <select name="tipo_reporte" id="tipo_reporte" onchange="this.form.submit()">
-                <option value="diario" {% if tipo_reporte=='diario' %}selected{% endif %}>Diario</option>
-                <option value="quincenal" {% if tipo_reporte=='quincenal' %}selected{% endif %}>Quincenal</option>
-                <option value="mensual" {% if tipo_reporte=='mensual' %}selected{% endif %}>Mensual</option>
-            </select>
-        </form>
+  {% if tipo_reporte == 'diario' %}
+    <div class="calendario-container">
+      <h3>Asistencia del Mes</h3>
 
-        <br>
+      <!-- Encabezado de días de la semana -->
+      <div class="calendario-dias-semana">
+        <div>Lun</div>
+        <div>Mar</div>
+        <div>Mié</div>
+        <div>Jue</div>
+        <div>Vie</div>
+        <div>Sáb</div>
+        <div>Dom</div>
+      </div>
 
-        <!-- Selección de fecha/mes según tipo de reporte -->
-        <form method="get" action="{{ url_for('generar_reporte') }}">
-            <input type="hidden" name="tipo_reporte" value="{{ tipo_reporte }}">
+      <!-- Días del mes -->
+      <div class="calendario-grid">
+        {% set first_weekday = calendar.monthrange(year, mes)[0] %}
+        {% set num_days = calendar.monthrange(year, mes)[1] %}
+        {% set dias_mes = range(1, num_days + 1) %}
 
-            {% if tipo_reporte == 'diario' %}
-                <label for="fecha">Fecha:</label>
-                <input type="date" name="fecha" id="fecha" value="{{ fecha_actual }}" required>
-            {% elif tipo_reporte == 'quincenal' %}
-                <label for="quincena">Quincena:</label>
-                <select name="quincena" id="quincena">
-                    <option value="1">1-15</option>
-                    <option value="2">16-fin de mes</option>
-                </select>
-                <label for="mes_quincena">Mes:</label>
-                <input type="number" name="mes_quincena" min="1" max="12" value="{{ fecha_actual.month }}" required>
-            {% elif tipo_reporte == 'mensual' %}
-                <label for="mes_mensual">Mes:</label>
-                <input type="number" name="mes_mensual" min="1" max="12" value="{{ fecha_actual.month }}" required>
+        {% for _ in range(first_weekday) %}
+          <div class="calendario-dia empty"></div>
+        {% endfor %}
+
+        {% for dia in dias_mes %}
+          {% set fecha_str = "%04d-%02d-%02d"|format(year, mes, dia) %}
+          {% set info = calendario.get(fecha_str) %}
+          {% if info %}
+            {% if info.asistencia %}
+              {% set clase_dia = 'asistio' %}
+            {% elif info.permiso_justificado %}
+              {% set clase_dia = 'permiso' %}
+            {% else %}
+              {% set clase_dia = 'falto' %}
             {% endif %}
-
-            <button type="submit">Generar</button>
-        </form>
-
-        <br>
-
-        <!-- Tabla del reporte -->
-        <table>
-            <thead>
-                <tr>
-                    <th>Empleado</th>
-                    <th>Días asistidos</th>
-                    <th>Horas extra</th>
-                    <th>Permisos</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for r in reporte %}
-                <tr>
-                    <td>{{ r.nombre }} {{ r.apellido_p }} {{ r.apellido_m }}</td>
-                    <td>{{ r.dias_asistidos }}</td>
-                    <td>{{ r.horas_extra }}</td>
-                    <td>{{ r.permisos }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+          {% else %}
+            {% set clase_dia = 'falto' %}
+          {% endif %}
+          <div class="calendario-dia {{ clase_dia }}" onclick="mostrarEmpleados('{{fecha_str}}')">
+            {{ dia }}
+          </div>
+        {% endfor %}
+      </div>
     </div>
+
+    
+<!-- Modal -->
+<!-- Modal -->
+<div id="modalEmpleados" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="cerrarModal()">&times;</span>
+    <h3 id="modalFecha"></h3>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre Completo</th>
+          <th>Entrada Mañana</th>
+          <th>Salida Comida</th>
+          <th>Entrada Tarde</th>
+          <th>Salida Tarde</th>
+        </tr>
+      </thead>
+      <tbody id="listaEmpleados">
+        <!-- Se llena dinámicamente con JavaScript -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const empleadosPorFecha = {
+    {% for fecha, lista in calendario.items() %}
+      '{{fecha}}': [
+        {% for e in lista %}
+        {
+          'id': '{{e.id}}',
+          'nombre_completo': '{{e.nombre_completo}}',
+          'entrada_manana': '{{e.entrada_manana}}',
+          'salida_comida': '{{e.salida_comida}}',
+          'entrada_tarde': '{{e.entrada_tarde}}',
+          'salida_tarde': '{{e.salida_tarde}}'
+        },
+        {% endfor %}
+      ],
+    {% endfor %}
+  };
+
+  function mostrarEmpleados(fecha) {
+    const empleados = empleadosPorFecha[fecha] || [];
+    document.getElementById('modalFecha').innerText = 'Empleados que asistieron el ' + fecha;
+    const tbody = document.getElementById('listaEmpleados');
+    tbody.innerHTML = '';
+
+    if (empleados.length === 0) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="6">Nadie</td>`;
+      tbody.appendChild(tr);
+    } else {
+      empleados.forEach(e => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${e.id}</td>
+          <td>${e.nombre_completo}</td>
+          <td>${e.entrada_manana}</td>
+          <td>${e.salida_comida}</td>
+          <td>${e.entrada_tarde}</td>
+          <td>${e.salida_tarde}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById('modalEmpleados').style.display = 'block';
+  }
+
+  function cerrarModal() {
+    document.getElementById('modalEmpleados').style.display = 'none';
+  }
+
+  window.onclick = function(event) {
+    const modal = document.getElementById('modalEmpleados');
+    if (event.target == modal) modal.style.display = 'none';
+  }
+</script>
+
+
+
+
+  {% else %}
+    <!-- Tabla para reporte quincenal o mensual -->
+    <table>
+      <thead>
+        <tr>
+          <th>Empleado</th>
+          <th>Días asistidos</th>
+          <th>Horas extra</th>
+          <th>Permisos</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reporte %}
+        <tr>
+          <td>{{ r.nombre }} {{ r.apellido_p }} {{ r.apellido_m }}</td>
+          <td>{{ r.dias_asistidos }}</td>
+          <td>{{ r.horas_extra }}</td>
+          <td>{{ r.permisos }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div style="text-align:center; margin-top:15px;">
+      <a href="{{ url_for('generar_reporte', tipo_reporte=tipo_reporte, exportar_pdf=1, quincena=request.args.get('quincena'), mes=request.args.get('mes')) }}" class="btn btn-volver" style="background-color:#2196F3;">
+        📄 Exportar PDF
+      </a>
+    </div>
+  {% endif %}
+</div>
 </body>
 </html>

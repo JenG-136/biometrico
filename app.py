@@ -6,8 +6,9 @@ from datetime import date, datetime
 from flask import send_file
 import io
 from fpdf import FPDF
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 import calendar
-
 
 
 # -------------------------------
@@ -318,129 +319,97 @@ def agregar_extra():
         flash(f"Error al agregar horas extra: {str(e)}", "danger")
     return redirect(url_for('ver_registros'))
 
+
 # -------------------------------
 # Generar reporte día, quincenal y mensual
 # -------------------------------
-
-
 @app.route("/generar_reporte", methods=["GET"])
 def generar_reporte():
     tipo_reporte = request.args.get('tipo_reporte', 'diario')
-    fecha_actual = date.today()
+    mes = int(request.args.get('mes', datetime.now().month))
+    year = int(request.args.get('year', datetime.now().year))
+    quincena = int(request.args.get('quincena', 1))
+
+    import calendar
+    from collections import defaultdict
+
+    calendario = defaultdict(list)
     reporte = []
 
-    # Para diario
-    if tipo_reporte == "diario":
-        fecha_sel = request.args.get('fecha', fecha_actual.strftime("%Y-%m-%d"))
-        cursor.execute("SELECT id, nombre, apellido_p, apellido_m FROM personal")
-        personal = cursor.fetchall()
+    if tipo_reporte == 'diario':
+        # Obtener todos los registros de asistencia del mes
+        cursor.execute("""
+            SELECT a.fecha, p.id, p.nombre, p.apellido_p, p.apellido_m,
+                   MAX(CASE WHEN a.tipo='entrada_manana' THEN a.hora END) AS entrada_manana,
+                   MAX(CASE WHEN a.tipo='salida_comida' THEN a.hora END) AS salida_comida,
+                   MAX(CASE WHEN a.tipo='entrada_tarde' THEN a.hora END) AS entrada_tarde,
+                   MAX(CASE WHEN a.tipo='salida_tarde' THEN a.hora END) AS salida_tarde,
+                   SUM(CASE WHEN a.tipo='hora_extra' THEN a.hora ELSE 0 END) AS horas_extra
+            FROM personal p
+            LEFT JOIN asistencia a ON p.id = a.personal_id AND MONTH(a.fecha) = %s AND YEAR(a.fecha) = %s
+            GROUP BY a.fecha, p.id, p.nombre, p.apellido_p, p.apellido_m
+        """, (mes, year))
+        registros = cursor.fetchall()
 
-        for p in personal:
-            # Verificar asistencia del día
-            cursor.execute("""
-                SELECT tipo, hora FROM asistencia
-                WHERE personal_id=%s AND fecha=%s
-            """, (p[0], fecha_sel))
-            asistencias = cursor.fetchall()
+        for fila in registros:
+            fecha_str = fila[0].strftime("%Y-%m-%d") if fila[0] else None
+            if fecha_str:
+                calendario[fecha_str].append({
+                    'id': fila[1],
+                    'nombre_completo': f"{fila[2]} {fila[3]} {fila[4]}",
+                    'entrada_manana': str(fila[5]) if fila[5] else '-',
+                    'salida_comida': str(fila[6]) if fila[6] else '-',
+                    'entrada_tarde': str(fila[7]) if fila[7] else '-',
+                    'salida_tarde': str(fila[8]) if fila[8] else '-',
+                    'horas_extra': fila[9] if fila[9] else 0
+                })
 
-            horas_extra = sum([h[1].hour + h[1].minute/60 for h in asistencias if h[0]=='hora_extra'])
-            dias_asistidos = 1 if asistencias else 0
+    else:
+        # Reporte quincenal o mensual
+        if tipo_reporte == 'quincenal':
+            if quincena == 1:
+                inicio = f"{year}-{mes:02d}-01"
+                fin = f"{year}-{mes:02d}-15"
+            else:
+                ultimo_dia = calendar.monthrange(year, mes)[1]
+                inicio = f"{year}-{mes:02d}-16"
+                fin = f"{year}-{mes:02d}-{ultimo_dia}"
+        else:
+            inicio = f"{year}-{mes:02d}-01"
+            ultimo_dia = calendar.monthrange(year, mes)[1]
+            fin = f"{year}-{mes:02d}-{ultimo_dia}"
 
-            # Ver permisos
-            cursor.execute("""
-                SELECT COUNT(*) FROM permisos
-                WHERE personal_id=%s AND fecha=%s
-            """, (p[0], fecha_sel))
-            permisos = cursor.fetchone()[0]
+        cursor.execute("""
+            SELECT p.nombre, p.apellido_p, p.apellido_m,
+                   SUM(CASE WHEN a.tipo IN ('entrada_manana','entrada_tarde') THEN 1 ELSE 0 END) as dias_asistidos,
+                   SUM(CASE WHEN a.tipo='permiso' THEN 1 ELSE 0 END) as permisos,
+                   SUM(CASE WHEN a.tipo='hora_extra' THEN a.hora ELSE 0 END) as horas_extra
+            FROM personal p
+            LEFT JOIN asistencia a ON a.personal_id = p.id AND a.fecha BETWEEN %s AND %s
+            GROUP BY p.id
+        """, (inicio, fin))
+        registros = cursor.fetchall()
 
+        for r in registros:
             reporte.append({
-                'nombre': p[1],
-                'apellido_p': p[2],
-                'apellido_m': p[3],
-                'dias_asistidos': dias_asistidos,
-                'horas_extra': horas_extra,
-                'permisos': permisos
+                'nombre': r[0],
+                'apellido_p': r[1],
+                'apellido_m': r[2],
+                'dias_asistidos': r[3] or 0,
+                'permisos': r[4] or 0,
+                'horas_extra': r[5] or 0
             })
 
-    # Para quincenal
-    elif tipo_reporte == "quincenal":
-        mes = int(request.args.get('mes_quincena', fecha_actual.month))
-        quincena = int(request.args.get('quincena', 1))
-        _, dias_mes = calendar.monthrange(fecha_actual.year, mes)
-        dia_inicio = 1 if quincena == 1 else 16
-        dia_fin = 15 if quincena == 1 else dias_mes
-
-        cursor.execute("SELECT id, nombre, apellido_p, apellido_m FROM personal")
-        personal = cursor.fetchall()
-
-        for p in personal:
-            # Asistencias quincenales
-            cursor.execute("""
-                SELECT COUNT(DISTINCT fecha) FROM asistencia
-                WHERE personal_id=%s AND fecha BETWEEN %s AND %s
-            """, (p[0], f"{fecha_actual.year}-{mes:02d}-{dia_inicio:02d}", f"{fecha_actual.year}-{mes:02d}-{dia_fin:02d}"))
-            dias_asistidos = cursor.fetchone()[0]
-
-            cursor.execute("""
-                SELECT SUM(TIME_TO_SEC(hora))/3600 FROM asistencia
-                WHERE personal_id=%s AND tipo='hora_extra' AND fecha BETWEEN %s AND %s
-            """, (p[0], f"{fecha_actual.year}-{mes:02d}-{dia_inicio:02d}", f"{fecha_actual.year}-{mes:02d}-{dia_fin:02d}"))
-            horas_extra = cursor.fetchone()[0] or 0
-
-            cursor.execute("""
-                SELECT COUNT(*) FROM permisos
-                WHERE personal_id=%s AND fecha BETWEEN %s AND %s
-            """, (p[0], f"{fecha_actual.year}-{mes:02d}-{dia_inicio:02d}", f"{fecha_actual.year}-{mes:02d}-{dia_fin:02d}"))
-            permisos = cursor.fetchone()[0]
-
-            reporte.append({
-                'nombre': p[1],
-                'apellido_p': p[2],
-                'apellido_m': p[3],
-                'dias_asistidos': dias_asistidos,
-                'horas_extra': round(horas_extra, 2),
-                'permisos': permisos
-            })
-
-    # Para mensual
-    elif tipo_reporte == "mensual":
-        mes = int(request.args.get('mes_mensual', fecha_actual.month))
-        _, dias_mes = calendar.monthrange(fecha_actual.year, mes)
-
-        cursor.execute("SELECT id, nombre, apellido_p, apellido_m FROM personal")
-        personal = cursor.fetchall()
-
-        for p in personal:
-            # Asistencias mensuales
-            cursor.execute("""
-                SELECT COUNT(DISTINCT fecha) FROM asistencia
-                WHERE personal_id=%s AND MONTH(fecha)=%s AND YEAR(fecha)=%s
-            """, (p[0], mes, fecha_actual.year))
-            dias_asistidos = cursor.fetchone()[0]
-
-            cursor.execute("""
-                SELECT SUM(TIME_TO_SEC(hora))/3600 FROM asistencia
-                WHERE personal_id=%s AND tipo='hora_extra' AND MONTH(fecha)=%s AND YEAR(fecha)=%s
-            """, (p[0], mes, fecha_actual.year))
-            horas_extra = cursor.fetchone()[0] or 0
-
-            cursor.execute("""
-                SELECT COUNT(*) FROM permisos
-                WHERE personal_id=%s AND MONTH(fecha)=%s AND YEAR(fecha)=%s
-            """, (p[0], mes, fecha_actual.year))
-            permisos = cursor.fetchone()[0]
-
-            reporte.append({
-                'nombre': p[1],
-                'apellido_p': p[2],
-                'apellido_m': p[3],
-                'dias_asistidos': dias_asistidos,
-                'horas_extra': round(horas_extra, 2),
-                'permisos': permisos
-            })
-
-    return render_template("generar_reporte.html", personal=personal, reporte=reporte,
-                           tipo_reporte=tipo_reporte, fecha_actual=fecha_actual)
+    return render_template(
+        "generar_reporte.html",
+        tipo_reporte=tipo_reporte,
+        calendario=calendario,
+        mes=mes,
+        year=year,
+        quincena=quincena,
+        reporte=reporte if tipo_reporte != 'diario' else [],
+        calendar=calendar
+    )
 
 
 # -------------------------------
