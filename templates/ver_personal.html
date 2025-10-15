@@ -4,6 +4,28 @@
   <meta charset="UTF-8">
   <title>Lista de Personal</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style2.css') }}">
+  <style>
+    /* Colores por puesto (puedes agregar más) */
+    {% set colores = {
+        'Regiduría': '#AED6F1',
+        'Administrativo': '#A9DFBF',
+        'Directores': '#F9E79F',
+        'Secretarios': '#F9E79F',
+        'Empleado': '#F5B7B1',
+        'Policias': '#F9E79F'
+    } %}
+
+    /* Estilo del buscador */
+    .buscador {
+      width: 50%;
+      padding: 8px 12px;
+      margin: 10px auto 20px auto;
+      display: block;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
 
@@ -19,7 +41,10 @@
     <a href="{{ url_for('home') }}" class="btn btn-volver">⬅ Volver a Inicio</a>
   </div>
 
-  <table>
+  <!-- Buscador -->
+  <input type="text" id="buscador" class="buscador" placeholder="Buscar personal por nombre, CURP o puesto..." onkeyup="filtrarTabla()">
+
+  <table id="tablaPersonal">
     <thead>
       <tr>
         <th>ID</th>
@@ -32,44 +57,43 @@
       </tr>
     </thead>
     <tbody>
+      {% set puesto_actual = None %}
       {% for p in personal %}
-      <tr>
-        <td>{{ loop.index }}</td> <!-- Numeración consecutiva -->
-        <td>{{ p[1] }} {{ p[2] }} {{ p[3] }}</td>
-        <td>{{ p[5] }}</td>
-        <td>{{ p[10] }}</td>
-        <td>{{ p[9] }}</td>
-        <td>
-          {% if p[15] %}
-            <img src="{{ url_for('static', filename='uploads/' ~ p[15]) }}" 
-                 alt="Foto Empleado" 
-                 class="foto-empleado" 
-                 onclick="abrirModal(this)">
-          {% else %}
-            Sin foto
-          {% endif %}
-        </td>
-        <td class="acciones">
-          <!-- Botón Ver -->
-          <a href="{{ url_for('detalle_personal', id=p[0]) }}" class="btn-icon" title="Ver">
-            <img src="{{ url_for('static', filename='icon/ver.png') }}" alt="Ver">
-          </a>
-
-          <!-- Botón Editar -->
-          <a href="{{ url_for('editar_personal', id=p[0]) }}" class="btn-icon" title="Editar">
-            <img src="{{ url_for('static', filename='icon/editar.png') }}" alt="Editar">
-          </a>
-
-        
-         <!-- Botón Eliminar -->
-<form method="POST" action="{{ url_for('eliminar_personal', id=p[0]) }}" 
-      onsubmit="return confirm('¿Seguro que deseas eliminar este empleado?');" style="display:inline;">
-  <button type="submit" class="btn-icon eliminar" title="Eliminar">
-    <img src="{{ url_for('static', filename='icon/eliminar.png') }}" alt="Eliminar">
-  </button>
-</form>
-        </td>
-      </tr>
+        {% if puesto_actual != p.puesto %}
+          <tr class="separador-puesto" style="background-color: {{ colores.get(p.puesto, '#D7DBDD') }}">
+            <td colspan="7">{{ p.puesto }}</td>
+          </tr>
+          {% set puesto_actual = p.puesto %}
+        {% endif %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ p.nombre }} {{ p.apellido_p }} {{ p.apellido_m }}</td>
+          <td>{{ p.curp }}</td>
+          <td>{{ p.telefono }}</td>
+          <td>{{ p.puesto }}</td>
+          <td>
+            {% if p.foto %}
+              <img src="{{ url_for('static', filename='uploads/' ~ p.foto) }}" 
+                   alt="Foto Empleado" class="foto-empleado" onclick="abrirModal(this)">
+            {% else %}
+              Sin foto
+            {% endif %}
+          </td>
+          <td class="acciones">
+            <a href="{{ url_for('detalle_personal', id=p.id) }}" class="btn-icon" title="Ver">
+              <img src="{{ url_for('static', filename='icon/ver.png') }}" alt="Ver">
+            </a>
+            <a href="{{ url_for('editar_personal', id=p.id) }}" class="btn-icon" title="Editar">
+              <img src="{{ url_for('static', filename='icon/editar.png') }}" alt="Editar">
+            </a>
+            <form method="POST" action="{{ url_for('eliminar_personal', id=p.id) }}" 
+                  onsubmit="return confirm('¿Seguro que deseas eliminar este empleado?');" style="display:inline;">
+              <button type="submit" class="btn-icon eliminar" title="Eliminar">
+                <img src="{{ url_for('static', filename='icon/eliminar.png') }}" alt="Eliminar">
+              </button>
+            </form>
+          </td>
+        </tr>
       {% endfor %}
     </tbody>
   </table>
@@ -95,6 +119,23 @@
       if (event.target === modal || event.target.classList.contains("cerrar")) {
         modal.style.display = "none";
       }
+    }
+
+    // Filtrar tabla
+    function filtrarTabla() {
+      const input = document.getElementById("buscador").value.toLowerCase();
+      const filas = document.querySelectorAll("#tablaPersonal tbody tr");
+      let mostrar = true;
+
+      filas.forEach(fila => {
+        // Saltar las filas separadoras de puesto
+        if (fila.classList.contains("separador-puesto")) {
+          fila.style.display = '';
+          return;
+        }
+        const textoFila = fila.innerText.toLowerCase();
+        fila.style.display = textoFila.includes(input) ? '' : 'none';
+      });
     }
   </script>
 </body>

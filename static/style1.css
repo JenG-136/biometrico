@@ -2,10 +2,12 @@
     font-family: Arial, sans-serif; 
     margin:0; background:#f2f2f2; 
 }
-    header { 
-        background: #FFD700; 
-        height: 120px; 
-        position: relative; }
+   /* Encabezado */
+header {
+    background-color: #f2f1f1;
+    padding: 10px 20px;
+    border-bottom: 2px solid #ccc;
+}
 
     header .logo { 
         position: absolute; 

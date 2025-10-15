@@ -258,3 +258,15 @@ tbody td img:hover {
     max-height: 80%;
   }
 }
+
+/* Fila separadora de puesto */
+    .separador-puesto {
+      background-color: #FFD700;
+      font-weight: bold;
+      text-align: center;
+      font-size: 16px;
+    }
+
+    
+
+
