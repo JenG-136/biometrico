@@ -39,53 +39,111 @@ try:
         database="biometrico_db"
     )
     cursor = db.cursor(dictionary=True)  # cursor devuelve diccionarios
-    print("✅ Conexión exitosa")
+    print("Conexión exitosa")
 except mysql.connector.Error as err:
-    print("❌ Error de conexión:", err)
+    print("Error de conexión:", err)
 
 # -------------------------------
 # Rutas principales
 # -------------------------------
+
+# Página inicial (lector de huella)
 @app.route("/")
-def home():
-    return render_template("index.html")
+def inicio():
+    return render_template("inicio.html")
+
+# Página secundaria solo parav administrador 
+@app.route("/admin_index")
+def admin_index():
+    return render_template("admin_index.html")
+
+# Ruta para acceso de admin
+@app.route("/admin_access_post", methods=["POST"])
+def admin_access_post():
+    password = request.form["password"]
+    if password == ADMIN_PASSWORD:
+        return redirect(url_for("admin_index"))  # <-- aquí
+    else:
+        flash("Contraseña incorrecta", "error")
+        return redirect(url_for("inicio"))
+
+
+
+
 
 # Ruta para buscar empleado (simulación de huella)
-@app.route('/buscar_empleado', methods=['POST'])
+#---------------------------------------------------------------------------
+# Nueva lógica de acuerdo a los cambios que se hizo en la tabla asistencia
+#---------------------------------------------------------------------------
+
+@app.route("/buscar_empleado", methods=["POST"])
 def buscar_empleado():
-    id_huella = request.json.get('id_huella', 3)
+    id_huella = request.json.get("id_huella", 3)
     cursor.execute("SELECT * FROM personal WHERE id = %s", (id_huella,))
     empleado = cursor.fetchone()
+
     if not empleado:
         return jsonify({"error": "Empleado no encontrado"}), 404
 
     hora_actual = datetime.now().strftime("%H:%M:%S")
-
-    # Determinar tipo de registro según horario
     hora_dt = datetime.strptime(hora_actual, "%H:%M:%S")
-    if hora_dt < datetime.strptime("14:00:00", "%H:%M:%S"):
-        tipo = "entrada_manana"
-    elif hora_dt < datetime.strptime("16:00:00", "%H:%M:%S"):
-        tipo = "salida_comida"
-    elif hora_dt < datetime.strptime("19:00:00", "%H:%M:%S"):
-        tipo = "entrada_tarde"
+    fecha_hoy = date.today()
+
+    # Verificar si ya hay un registro para hoy
+    cursor.execute("SELECT * FROM asistencia WHERE personal_id=%s AND fecha=%s", (id_huella, fecha_hoy))
+    registro = cursor.fetchone()
+
+    if not registro:
+        # Si no existe registro hoy → crear y guardar hora_entrada
+        cursor.execute("""
+            INSERT INTO asistencia (personal_id, fecha, hora_entrada)
+            VALUES (%s, %s, %s)
+        """, (id_huella, fecha_hoy, hora_actual))
+        db.commit()
+        tipo = "entrada_mañana"
+
     else:
-        tipo = "salida_tarde"
+        # Si ya existe, determinar qué campo falta por registrar
+        if not registro["salida_comida"] and hora_dt < datetime.strptime("14:00:00", "%H:%M:%S"):
+            cursor.execute("UPDATE asistencia SET salida_comida=%s WHERE id=%s", (hora_actual, registro["id"]))
+            tipo = "salida_comida"
 
-    # Insertar o actualizar registro del día
-    cursor.execute("""
-        INSERT INTO asistencia (personal_id, tipo, hora, fecha)
-        VALUES (%s, %s, %s, CURDATE())
-        ON DUPLICATE KEY UPDATE hora=%s
-    """, (id_huella, tipo, hora_actual, hora_actual))
-    db.commit()
+        elif not registro["entrada_tarde"] and hora_dt < datetime.strptime("17:00:00", "%H:%M:%S"):
+            cursor.execute("UPDATE asistencia SET entrada_tarde=%s WHERE id=%s", (hora_actual, registro["id"]))
+            tipo = "entrada_tarde"
 
-    retraso_min = max(0, int((hora_dt - datetime.strptime("09:00:00", "%H:%M:%S")).total_seconds() / 60))
+        elif not registro["hora_salida"]:
+            cursor.execute("UPDATE asistencia SET hora_salida=%s WHERE id=%s", (hora_actual, registro["id"]))
+            tipo = "salida_tarde"
+
+            # ---- NUEVA LÓGICA: horas extra automáticas después de las 20:00 ----
+            hora_extra_inicio = datetime.strptime("20:00:00", "%H:%M:%S")
+            if hora_dt > hora_extra_inicio:
+                # Calcular diferencia en horas completas
+                diferencia = (hora_dt - hora_extra_inicio).seconds / 3600
+                horas_extra = round(diferencia, 2)  # Ej. 1.5, 2.25, etc.
+                # Guardar automáticamente en la columna hora_extra
+                cursor.execute("""
+                    UPDATE asistencia 
+                    SET hora_extra = SEC_TO_TIME(ROUND(%s * 3600))
+                    WHERE id=%s
+                """, (horas_extra, registro["id"]))
+                tipo = "salida_tarde_con_extra"
+
+        else:
+            tipo = "ya_registrado"
+
+        db.commit()
+
+    retraso_min = max(
+        0,
+        int((hora_dt - datetime.strptime("09:00:00", "%H:%M:%S")).total_seconds() / 60)
+    )
 
     return jsonify({
-        "nombre": empleado['nombre'],
-        "puesto": empleado['puesto'],
-        "foto": empleado['foto'],
+        "nombre": empleado["nombre"],
+        "puesto": empleado["puesto"],
+        "foto": empleado["foto"],
         "hora": hora_actual,
         "tipo": tipo,
         "retraso": f"{retraso_min} min" if retraso_min > 0 else "A tiempo"
@@ -93,27 +151,33 @@ def buscar_empleado():
 
 
 
+
+
 #acceso de administrador
-@app.route("/admin", methods=["POST"])
+@app.route('/admin_access', methods=['POST'])
 def admin_access():
-    password = request.form.get("password")
-    accion = request.form.get("accion")
+    password = request.form.get('password')
+    accion = request.form.get('accion')  
 
     if password == ADMIN_PASSWORD:
-        flash("Acceso concedido", "success")
-        if accion == "agregar_personal":
-            return redirect(url_for("agregar_personal"))
-        elif accion == "ver_registros":
-            return redirect(url_for("ver_registros"))
-        elif accion == "ver_personal":
-            return redirect(url_for("ver_personal"))
+        if accion == "ver_registros":
+            return redirect(url_for('ver_registros'))
+        elif accion == "agregar_personal":
+            return redirect(url_for('agregar_personal'))
         elif accion == "generar_reporte":
-            return redirect(url_for("generar_reporte"))
+            return redirect(url_for('generar_reporte'))
+        elif accion == "ver_personal":
+            return redirect(url_for('ver_personal'))
         else:
-            return redirect(url_for("home"))
+            flash("Acción no reconocida.", "danger")
+            return redirect(url_for('admin_index'))  # <-- aquí
     else:
-        flash("Contraseña incorrecta", "error")
-        return redirect(url_for("home"))
+        flash("Contraseña incorrecta.", "danger")
+        return redirect(url_for('inicio'))
+
+
+
+
 
 # -------------------------------
 # Página para agregar personal
@@ -188,11 +252,21 @@ def registrar_personal():
 def ver_personal():
     cursor = db.cursor(dictionary=True)
     cursor.execute("""
-        SELECT * FROM personal 
-        ORDER BY puesto, apellido_p, apellido_m, nombre
-    """)
-    personal = cursor.fetchall()
-    return render_template("ver_personal.html", personal=personal)
+    SELECT * FROM personal 
+    ORDER BY puesto ASC, nombre ASC, apellido_p ASC, apellido_m ASC
+""")
+    registros = cursor.fetchall()
+
+    # Agrupacion por puesto 
+    personal_por_puesto = {}
+    for p in registros:
+        puesto = p['puesto']
+        if puesto not in personal_por_puesto:
+            personal_por_puesto[puesto] = []
+        personal_por_puesto[puesto].append(p)
+
+    return render_template("ver_personal.html", personal_por_puesto=personal_por_puesto)
+
 
 
 # -------------------------------
@@ -201,7 +275,7 @@ def ver_personal():
 @app.route("/detalle/<int:id>")
 def detalle_personal(id):
     cursor.execute("SELECT * FROM personal WHERE id = %s", (id,))
-    empleado = cursor.fetchone()  # ya devuelve un diccionario
+    empleado = cursor.fetchone()  
     if not empleado:
         flash("Empleado no encontrado", "warning")
         return redirect(url_for('ver_personal'))
@@ -209,37 +283,39 @@ def detalle_personal(id):
 
 
 # -------------------------------
-# Editar información de un empleado
+# Editar información de un empleado (solo guardar)
 # -------------------------------
 @app.route("/editar/<int:id>", methods=["GET", "POST"])
 def editar_personal(id):
+    cursor = db.cursor(dictionary=True)
+
     if request.method == "GET":
         cursor.execute("SELECT * FROM personal WHERE id = %s", (id,))
         empleado = cursor.fetchone()
         if not empleado:
-            flash("Empleado no encontrado", "warning")
             return redirect(url_for('ver_personal'))
         return render_template("editar_personal.html", empleado=empleado)
 
     if request.method == "POST":
         try:
-            nombre = request.form['nombre']
-            apellido_p = request.form['apellido_p']
-            apellido_m = request.form['apellido_m']
-            fecha_nac = request.form['fecha_nac']
-            curp = request.form['curp']
-            edad = request.form['edad']
-            calle = request.form['calle']
-            colonia = request.form['colonia']
-            puesto = request.form['puesto']
-            telefono = request.form['telefono']
-            genero = request.form['genero']
-            estatus = request.form['estatus']
-            turno = request.form['turno']
-            fecha_ingreso = request.form['fecha_ingreso']
+            # Obtener datos del formulario
+            nombre = request.form.get('nombre', '').strip()
+            apellido_p = request.form.get('apellido_p', '').strip()
+            apellido_m = request.form.get('apellido_m', '').strip()
+            fecha_nac = request.form.get('fecha_nac', None)
+            curp = request.form.get('curp', '').strip()
+            edad = int(request.form.get('edad', 0) or 0)
+            calle = request.form.get('calle', '').strip()
+            colonia = request.form.get('colonia', '').strip()
+            puesto = request.form.get('puesto', '').strip()
+            telefono = request.form.get('telefono', '').strip()
+            genero = request.form.get('genero', '').strip()
+            estatus = request.form.get('estatus', '').strip()
+            turno = request.form.get('turno', '').strip()
+            fecha_ingreso = request.form.get('fecha_ingreso', None)
 
-            # Actualizar foto
-            foto = request.files['foto']
+            # Manejo de foto
+            foto = request.files.get('foto')
             if foto and foto.filename != '':
                 filename = secure_filename(foto.filename)
                 ruta_completa = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -247,13 +323,15 @@ def editar_personal(id):
                 nombre_foto = filename
             else:
                 cursor.execute("SELECT foto FROM personal WHERE id = %s", (id,))
-                nombre_foto = cursor.fetchone()[0]
+                res = cursor.fetchone()
+                nombre_foto = res['foto'] if res and res['foto'] else ''
 
+            # Actualizacion en la bd 
             sql = """
-                UPDATE personal SET 
-                nombre=%s, apellido_p=%s, apellido_m=%s, fecha_nac=%s, curp=%s,
-                edad=%s, calle=%s, colonia=%s, puesto=%s, telefono=%s,
-                genero=%s, estatus=%s, turno=%s, fecha_ingreso=%s, foto=%s
+                UPDATE personal SET
+                    nombre=%s, apellido_p=%s, apellido_m=%s, fecha_nac=%s, curp=%s,
+                    edad=%s, calle=%s, colonia=%s, puesto=%s, telefono=%s,
+                    genero=%s, estatus=%s, turno=%s, fecha_ingreso=%s, foto=%s
                 WHERE id=%s
             """
             valores = (
@@ -263,13 +341,13 @@ def editar_personal(id):
             cursor.execute(sql, valores)
             db.commit()
 
-            flash("Empleado actualizado correctamente", "success")
-            return redirect(url_for('ver_personal'))
-
         except Exception as e:
             db.rollback()
-            flash(f"Error al actualizar: {str(e)}", "danger")
-            return redirect(url_for('editar_personal', id=id))
+            print(f"Error al actualizar empleado {id}: {e}")
+
+        # Rgresa en la vista de ver:personal
+        return redirect(url_for("ver_personal"))
+
 
 # -------------------------------
 # Eliminar un empleado
@@ -290,107 +368,156 @@ def eliminar_personal(id):
 # -------------------------------
 # Ver registros de asistencia
 # -------------------------------
-
 @app.route("/ver_registros")
 def ver_registros():
-    # Obtener lista de empleados
-    cursor.execute("SELECT id, nombre, apellido_p, apellido_m, puesto FROM personal")
-    personal = cursor.fetchall()  # ahora es lista de diccionarios
+    try:
+        # Obtener lista de empleados junto con su asistencia de hoy
+        cursor.execute("""
+            SELECT 
+                p.id,
+                p.nombre,
+                p.apellido_p,
+                p.apellido_m,
+                p.puesto,
+                a.hora_entrada,
+                a.salida_comida,
+                a.entrada_tarde,
+                a.hora_salida,
+                a.hora_extra
+            FROM personal p
+            LEFT JOIN asistencia a 
+                ON p.id = a.personal_id AND a.fecha = CURDATE()
+            ORDER BY p.nombre, p.apellido_p
+        """)
+        registros = cursor.fetchall()
 
-    # Obtener registros solo del día actual
-    cursor.execute("""
-        SELECT p.id, p.nombre, p.apellido_p, p.apellido_m, p.puesto,
-               MAX(CASE WHEN a.tipo='entrada_manana' THEN a.hora END) AS entrada_manana,
-               MAX(CASE WHEN a.tipo='salida_comida' THEN a.hora END) AS salida_comida,
-               MAX(CASE WHEN a.tipo='entrada_tarde' THEN a.hora END) AS entrada_tarde,
-               MAX(CASE WHEN a.tipo='salida_tarde' THEN a.hora END) AS salida_tarde,
-               SUM(CASE WHEN a.tipo='hora_extra' THEN a.hora ELSE 0 END) AS horas_extra
-        FROM personal p
-        LEFT JOIN asistencia a
-            ON p.id = a.personal_id AND a.fecha = CURDATE()
-        GROUP BY p.id, p.nombre, p.apellido_p, p.apellido_m, p.puesto
-        ORDER BY p.nombre, p.apellido_p
-    """)
-    registros = cursor.fetchall()  # lista de diccionarios
+        lista_registros = []
+        hoy = datetime.today()
+        dia_semana = hoy.weekday()  # 0=lunes, ..., 5=sábado, 6=domingo
 
-    lista_registros = []
-    hoy = datetime.today()
-    dia_semana = hoy.weekday()  # 0=lunes, ..., 5=sábado, 6=domingo
+        for r in registros:
+            puesto = (r['puesto'] or "").lower()
 
-    for r in registros:
-        puesto = r['puesto'].lower()
+            # Reglas según el día y el tipo de puesto
+            if dia_semana == 6 and puesto != "policía":
+                entrada_manana = salida_comida = entrada_tarde = salida_tarde = "No laboral"
+            elif dia_semana == 5 and puesto != "policía":
+                entrada_manana = r['hora_entrada'] or "-"
+                salida_comida = r['salida_comida'] or "13:00"
+                entrada_tarde = "-"
+                salida_tarde = "-"
+            else:
+                entrada_manana = r['hora_entrada'] or "-"
+                salida_comida = r['salida_comida'] or "-"
+                entrada_tarde = r['entrada_tarde'] or "-"
+                salida_tarde = r['hora_salida'] or "-"
+
+            lista_registros.append({
+                'id': r['id'],
+                'nombre': r['nombre'],
+                'apellido_p': r['apellido_p'],
+                'apellido_m': r['apellido_m'],
+                'entrada_manana': entrada_manana,
+                'salida_comida': salida_comida,
+                'entrada_tarde': entrada_tarde,
+                'salida_tarde': salida_tarde,
+                'horas_extra': r['hora_extra'] or "0:00"
+            })
         
-        if dia_semana == 6 and puesto != "policía":  # Domingo y no es policía
-            entrada_manana = salida_comida = entrada_tarde = salida_tarde = "No laboral"
-        elif dia_semana == 5 and puesto != "policía":  # Sábado
-            entrada_manana = r['entrada_manana'] if r['entrada_manana'] else "-"
-            salida_comida = r['salida_comida'] if r['salida_comida'] else "13:00"  # salida directa a la 1
-            entrada_tarde = "-"
-            salida_tarde = "-"
-        else:  # Lunes a viernes o policía
-            entrada_manana = r['entrada_manana'] if r['entrada_manana'] else "-"
-            salida_comida = r['salida_comida'] if r['salida_comida'] else "-"
-            entrada_tarde = r['entrada_tarde'] if r['entrada_tarde'] else "-"
-            salida_tarde = r['salida_tarde'] if r['salida_tarde'] else "-"
+        # Obtener lista completa de empleados para el modal
+        cursor.execute("SELECT id, nombre, apellido_p, apellido_m, puesto FROM personal ORDER BY nombre, apellido_p")
+        personal = cursor.fetchall()
 
-        lista_registros.append({
-            'id': r['id'],
-            'nombre': r['nombre'],
-            'apellido_p': r['apellido_p'],
-            'apellido_m': r['apellido_m'],
-            'entrada_manana': entrada_manana,
-            'salida_comida': salida_comida,
-            'entrada_tarde': entrada_tarde,
-            'salida_tarde': salida_tarde,
-            'horas_extra': r['horas_extra'] if r['horas_extra'] else 0
-        })
+        fecha_actual = date.today().strftime("%d/%m/%Y")
+        return render_template(
+            "ver_registros.html",
+            registros=lista_registros,
+            personal=personal,  #la lista de empleados
+            fecha_actual=fecha_actual
+        )
 
-    fecha_actual = date.today().strftime("%d/%m/%Y")
+    except Exception as e:
+        print(f"Error en ver_registros: {e}")
+        return f"Error al obtener los registros: {e}"
 
-    return render_template("ver_registros.html", registros=lista_registros, personal=personal, fecha_actual=fecha_actual)
 
-#-------------------------------
-#Editar registro de asistencia
-#-------------------------------
+# -------------------------------
+# Editar registro de asistencia (solo horas normales)
+# -------------------------------
 @app.route('/editar_registro', methods=["POST"])
 def editar_registro():
     try:
         id_personal = request.form['id']
-        entrada_manana = request.form.get('entrada_manana')
-        salida_comida = request.form.get('salida_manana')
-        entrada_tarde = request.form.get('entrada_tarde')
-        salida_tarde = request.form.get('salida_tarde')
-
         fecha_hoy = datetime.now().date()
 
-        #Validaciones basicas (opcional)
-        if not any([entrada_manana, salida_comida, entrada_tarde, salida_tarde]):
-            flash("No se ingresó ningún horario para actualizar", "warning")
-            return redirect(url_for('ver_registros'))
-        
-        #Actualizar o insertar cada campo segun corresponda
-        for tipo, hora in[
-            ('entrada_manana', entrada_manana),
-            ('salida_comida', salida_comida),
-            ('entrada_tarde', entrada_tarde),
-            ('salida_tarde', salida_tarde)
-        ]:
-            if hora:
-                cursor.execute("""
-                    INSERT INTO asistencia (personal_id, tipo, hora, fecha)
-                    VALUES (%s, %s, %s, %s)
-                    ON DUPLICATE KEY UPDATE hora=%s
-                """, (id_personal, tipo, hora, fecha_hoy, hora))
-        
+        # Obtener los valores del formulario
+        hora_entrada = request.form.get('entrada_manana', '').strip() or None
+        salida_comida = request.form.get('salida_comida', '').strip() or None
+        entrada_tarde = request.form.get('entrada_tarde', '').strip() or None
+        hora_salida = request.form.get('salida_tarde', '').strip() or None
+
+        # Normalizar formato HH:MM:SS
+        def normalizar(h):
+            if not h:
+                return None
+            h = h.strip()
+            if len(h) == 5 and ':' in h:  # HH:MM
+                return f"{h}:00"
+            return h
+
+        hora_entrada = normalizar(hora_entrada)
+        salida_comida = normalizar(salida_comida)
+        entrada_tarde = normalizar(entrada_tarde)
+        hora_salida = normalizar(hora_salida)
+
+        # Insertar o actualizar registro del día
+        cursor.execute("""
+            INSERT INTO asistencia (personal_id, fecha, hora_entrada, salida_comida, entrada_tarde, hora_salida)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                hora_entrada = VALUES(hora_entrada),
+                salida_comida = VALUES(salida_comida),
+                entrada_tarde = VALUES(entrada_tarde),
+                hora_salida = VALUES(hora_salida)
+        """, (id_personal, fecha_hoy, hora_entrada, salida_comida, entrada_tarde, hora_salida))
+
         db.commit()
-        flash("Registro actualizado correctamente", "success")
+        return jsonify({"status": "success", "message": "Horas normales actualizadas correctamente."})
+
     except Exception as e:
         db.rollback()
-        flash(f"Error al actualizar registro: {str(e)}", "danger")
+        print(f"Error en editar_registro: {e}")
+        return jsonify({"status": "error", "message": f"Error al guardar: {str(e)}"})
+    
+# ----------------------------------------
+# Registrar permiso justificado
+# ----------------------------------------
+@app.route("/registrar_permiso", methods=["POST"])
+def registrar_permiso():
+    try:
+        personal_id = request.form.get("empleado_id")
+        fecha = request.form.get("fecha")
+        motivo = request.form.get("motivo")
 
-    return redirect(url_for("ver_registros"))
+        if not personal_id or not fecha or not motivo:
+            flash("Faltan datos requeridos", "error")
+            return redirect(url_for("ver_registros"))
 
+        cursor.execute("""
+            INSERT INTO permisos (personal_id, fecha, motivo)
+            VALUES (%s, %s, %s)
+        """, (personal_id, fecha, motivo))
 
+        db.commit()
+        flash("Permiso registrado correctamente", "success")
+        return redirect(url_for("ver_registros"))
+
+    except mysql.connector.Error as err:
+        print(f"Error al registrar el permiso: {err}")
+        flash("Ocurrió un error al guardar el permiso", "error")
+        return redirect(url_for("ver_registros"))
+
+    
 
 # -------------------------------
 # Agregar horas extra
@@ -398,21 +525,34 @@ def editar_registro():
 @app.route("/agregar_extra", methods=["POST"])
 def agregar_extra():
     try:
-        id_personal = request.form['id']
-        horas_extra = request.form['horas_extra']
+        id_personal = request.form.get('id')
+        horas_extra = request.form.get('horas_extra')
 
-        if not horas_extra or int(horas_extra) <= 0:
-            flash("Debe ingresar una cantidad válida de horas extra", "warning")
+        if not id_personal:
+            flash("ID del personal no proporcionado", "warning")
             return redirect(url_for('ver_registros'))
 
-        # Insertar nueva hora extra
+        if not horas_extra or not horas_extra.isdigit():
+            flash("Debe ingresar una cantidad válida de horas extra (1 a 4)", "warning")
+            return redirect(url_for('ver_registros'))
+
+        horas_extra_int = int(horas_extra)
+        if horas_extra_int <= 0 or horas_extra_int > 4:
+            flash("Solo se permiten de 1 a 4 horas extra", "warning")
+            return redirect(url_for('ver_registros'))
+
+        # Formato HH:MM:SS
+        hora_formateada = f"{horas_extra_int}:00:00"
+
+        # Insertar o actualizar horas extra
         cursor.execute("""
-            INSERT INTO asistencia (personal_id, tipo, hora, fecha)
-            VALUES (%s, 'hora_extra', %s, CURDATE())
-        """, (id_personal, horas_extra))
+            INSERT INTO asistencia (personal_id, fecha, hora_extra)
+            VALUES (%s, CURDATE(), %s)
+            ON DUPLICATE KEY UPDATE hora_extra = VALUES(hora_extra)
+        """, (id_personal, hora_formateada))
 
         db.commit()
-        flash("Horas extra agregadas correctamente", "success")
+        flash("Horas extra registradas correctamente", "success")
 
     except Exception as e:
         db.rollback()
@@ -421,35 +561,48 @@ def agregar_extra():
     return redirect(url_for('ver_registros'))
 
 
-
-
 # -------------------------------
-# Generar reporte día, quincenal y mensual
+# Generar reporte (Diario, Quincenal, Mensual)
 # -------------------------------
 @app.route("/generar_reporte", methods=["GET"])
 def generar_reporte():
-    # --- Parámetros ---
     tipo_reporte = request.args.get('tipo_reporte', 'diario')
-    mes = int(request.args.get('mes', datetime.now().month))
-    year = int(request.args.get('year', datetime.now().year))
-    quincena = int(request.args.get('quincena', 1))
-    exportar_pdf = request.args.get('exportar_pdf')  # 🔸 nuevo parámetro
+
+    try:
+        mes = int(request.args.get('mes', datetime.now().month))
+    except ValueError:
+        mes = datetime.now().month
+
+    try:
+        year = int(request.args.get('year', datetime.now().year))
+    except ValueError:
+        year = datetime.now().year
+
+    try:
+        quincena = int(request.args.get('quincena', 1))
+    except ValueError:
+        quincena = 1
+
+    exportar_pdf = request.args.get('exportar_pdf')
 
     calendario = defaultdict(list)
     reporte = []
 
+    # --------------------------------------------------------------------------
     # --- Reporte diario ---
+    # --------------------------------------------------------------------------
     if tipo_reporte == 'diario':
         cursor.execute("""
             SELECT a.fecha, p.id, p.nombre, p.apellido_p, p.apellido_m,
-                   MAX(CASE WHEN a.tipo='entrada_manana' THEN a.hora END) AS entrada_manana,
-                   MAX(CASE WHEN a.tipo='salida_comida' THEN a.hora END) AS salida_comida,
-                   MAX(CASE WHEN a.tipo='entrada_tarde' THEN a.hora END) AS entrada_tarde,
-                   MAX(CASE WHEN a.tipo='salida_tarde' THEN a.hora END) AS salida_tarde,
-                   SUM(CASE WHEN a.tipo='hora_extra' THEN a.hora ELSE 0 END) AS horas_extra
+                   a.hora_entrada,
+                   a.salida_comida,
+                   a.entrada_tarde,
+                   a.hora_salida,
+                   a.hora_extra
             FROM personal p
-            LEFT JOIN asistencia a ON p.id = a.personal_id AND MONTH(a.fecha) = %s AND YEAR(a.fecha) = %s
-            GROUP BY a.fecha, p.id, p.nombre, p.apellido_p, p.apellido_m
+            LEFT JOIN asistencia a 
+            ON p.id = a.personal_id AND MONTH(a.fecha) = %s AND YEAR(a.fecha) = %s
+            ORDER BY a.fecha, p.id
         """, (mes, year))
         registros = cursor.fetchall()
 
@@ -459,24 +612,17 @@ def generar_reporte():
                 continue
 
             fecha_str = fecha.strftime("%Y-%m-%d")
-            dia_semana = fecha.weekday()  # 0=lunes, 6=domingo
-            horas_extra = fila['horas_extra'] if fila['horas_extra'] is not None else 0
+            dia_semana = fecha.weekday()  # 0 = lunes, 6 = domingo
+            horas_extra = fila['hora_extra'] if fila['hora_extra'] is not None else 0
 
-            # Lunes a viernes
-            if dia_semana < 5:
-                calendario[fecha_str].append({
-                    'id': fila['id'],
-                    'nombre_completo': f"{fila['nombre']} {fila['apellido_p']} {fila['apellido_m']}",
-                    'entrada_manana': str(fila['entrada_manana']) if fila['entrada_manana'] else '-',
-                    'salida_comida': str(fila['salida_comida']) if fila['salida_comida'] else '-',
-                    'entrada_tarde': str(fila['entrada_tarde']) if fila['entrada_tarde'] else '-',
-                    'salida_tarde': str(fila['salida_tarde']) if fila['salida_tarde'] else '-',
-                    'horas_extra': horas_extra
-                })
-            # Sábado
-            elif dia_semana == 5:
-                entrada_manana = str(fila['entrada_manana']) if fila['entrada_manana'] else '-'
-                salida_tarde = str(fila['salida_tarde']) if fila['salida_tarde'] else '-'
+            # --- Domingo: se omite ---
+            if dia_semana == 6:
+                continue
+
+            # --- Sábado ---
+            if dia_semana == 5:
+                entrada_manana = str(fila['hora_entrada']) if fila['hora_entrada'] else '-'
+                salida_tarde = str(fila['hora_salida']) if fila['hora_salida'] else '-'
 
                 if entrada_manana != '-' and entrada_manana < "09:00:00":
                     entrada_manana = "09:00:00"
@@ -492,11 +638,20 @@ def generar_reporte():
                     'salida_tarde': salida_tarde,
                     'horas_extra': horas_extra
                 })
-            # Domingo se omite
-            else:
-                continue
+            else:  # Lunes a Viernes
+                calendario[fecha_str].append({
+                    'id': fila['id'],
+                    'nombre_completo': f"{fila['nombre']} {fila['apellido_p']} {fila['apellido_m']}",
+                    'entrada_manana': str(fila['hora_entrada']) if fila['hora_entrada'] else '-',
+                    'salida_comida': str(fila['salida_comida']) if fila['salida_comida'] else '-',
+                    'entrada_tarde': str(fila['entrada_tarde']) if fila['entrada_tarde'] else '-',
+                    'salida_tarde': str(fila['hora_salida']) if fila['hora_salida'] else '-',
+                    'horas_extra': horas_extra
+                })
 
+    # --------------------------------------------------------------------------
     # --- Reporte quincenal o mensual ---
+    # --------------------------------------------------------------------------
     else:
         if tipo_reporte == 'quincenal':
             if quincena == 1:
@@ -513,13 +668,16 @@ def generar_reporte():
 
         cursor.execute("""
             SELECT p.nombre, p.apellido_p, p.apellido_m,
-                   SUM(CASE WHEN a.tipo IN ('entrada_manana','entrada_tarde') THEN 1 ELSE 0 END) as dias_asistidos,
-                   SUM(CASE WHEN a.tipo='permiso' THEN 1 ELSE 0 END) as permisos,
-                   SUM(CASE WHEN a.tipo='hora_extra' THEN a.hora ELSE 0 END) as horas_extra
+                   COUNT(DISTINCT CASE WHEN a.hora_entrada IS NOT NULL OR a.entrada_tarde IS NOT NULL THEN a.fecha END) AS dias_asistidos,
+                   SUM(CASE WHEN a.hora_extra IS NOT NULL THEN TIME_TO_SEC(a.hora_extra)/3600 ELSE 0 END) AS horas_extra,
+                    COUNT(DISTINCT perm.id) AS permisos
             FROM personal p
-            LEFT JOIN asistencia a ON a.personal_id = p.id AND a.fecha BETWEEN %s AND %s
+            LEFT JOIN asistencia a 
+            ON a.personal_id = p.id AND a.fecha BETWEEN %s AND %s
+            LEFT JOIN permisos perm
+                ON perm.personal_id = p.id AND perm.fecha BETWEEN %s AND %s
             GROUP BY p.id
-        """, (inicio, fin))
+        """, (inicio, fin, inicio, fin))
         registros = cursor.fetchall()
 
         for r in registros:
@@ -528,52 +686,52 @@ def generar_reporte():
                 'apellido_p': r['apellido_p'],
                 'apellido_m': r['apellido_m'],
                 'dias_asistidos': r['dias_asistidos'] or 0,
-                'permisos': r['permisos'] or 0,
-                'horas_extra': r['horas_extra'] or 0
+                'horas_extra': round(r['horas_extra'],2) if r['horas_extra'] else 0,
+                'permisos': r['permisos'] or 0
             })
 
-    # --- 🔸 NUEVA SECCIÓN: Generar y descargar PDF ---
+    # --------------------------------------------------------------------------
+    # --- Generar PDF ---
+    # --------------------------------------------------------------------------
     if exportar_pdf and tipo_reporte in ('quincenal', 'mensual'):
         buffer = BytesIO()
         p = canvas.Canvas(buffer, pagesize=letter)
 
+        # Logos
+        try:
+            p.drawImage('static/img/escudomx.png', 50, 705, width=80, height=70)
+            p.drawImage('static/img/Logousila2.png', 470, 705, width=80, height=70)
+        except:
+            pass 
 
-        # Agregar logos
-        p.drawImage('static/img/escudomx.png', 50, 705, width=80, height=70)  # Logo izquierdo superior
-        p.drawImage('static/img/Logousila2.png', 470, 705, width=80, height=70)  # Logo derecho superior
-        
-        # Título 
-        titulo = ""
+        # Título
         if tipo_reporte == 'quincenal':
-            if quincena == 1:
-                titulo = f"Reporte Quincenal 1-15 de {mes}/{year}"
-            else:
-                titulo = f"Reporte Quincenal 16-fin de mes de {mes}/{year}"
-        elif tipo_reporte == 'mensual':
+            titulo = f"Reporte Quincenal {'1-15' if quincena == 1 else '16-fin'} de {mes}/{year}"
+        else:
             titulo = f"Reporte Mensual de {mes}/{year}"
 
         p.setFont("Helvetica-Bold", 14)
-        p.drawString(200, 720, f"Reporte {tipo_reporte.capitalize()} - {mes}/{year}")
+        p.drawString(200, 720, titulo)
         p.setFont("Helvetica", 11)
         y = 680
 
-         # Encabezado de tabla
+        # Encabezados
         p.drawString(70, y, "Empleado")
         p.drawString(250, y, "Días asistidos")
-        p.drawString(350, y, "Permisos")
         p.drawString(450, y, "Horas extra")
-        y -= 20  # Espacio para los datos
-        
+        y -= 20
+
+        # Contenido
         for r in reporte:
             nombre_completo = f"{r['nombre']} {r['apellido_p']} {r['apellido_m']}"
             p.drawString(70, y, nombre_completo)
             p.drawString(250, y, str(r['dias_asistidos']))
-            p.drawString(350, y, str(r['permisos']))
             p.drawString(450, y, str(r['horas_extra']))
             y -= 18
+
             if y < 60:
                 p.showPage()
-                y = 750  # Reiniciar y para la nueva página
+                y = 750
 
         p.save()
         buffer.seek(0)
@@ -584,7 +742,9 @@ def generar_reporte():
             mimetype='application/pdf'
         )
 
+    # --------------------------------------------------------------------------
     # --- Renderizado normal ---
+    # --------------------------------------------------------------------------
     return render_template(
         "generar_reporte.html",
         tipo_reporte=tipo_reporte,
@@ -595,6 +755,53 @@ def generar_reporte():
         reporte=reporte if tipo_reporte != 'diario' else [],
         calendar=calendar
     )
+
+# ---------------------------------------------
+# ACTUALIZAR REGISTRO DESDE generar_reporte.html
+# ---------------------------------------------
+@app.route('/actualizar_asistencia', methods=["POST"])
+def actualizar_asistencia():
+    try:
+        id_personal = request.form['id']
+        fecha = request.form.get('fecha', datetime.now().date())
+        entrada_manana = request.form.get('entrada_manana', '').strip()
+        salida_comida = request.form.get('salida_comida', '').strip()
+        entrada_tarde = request.form.get('entrada_tarde', '').strip()
+        salida_tarde = request.form.get('salida_tarde', '').strip()
+        hora_extra = request.form.get('hora_extra', '').strip()
+
+        modificaciones_realizadas = False 
+
+        cursor.execute("SELECT * FROM asistencia WHERE personal_id=%s AND fecha=%s", (id_personal, fecha))
+        registro = cursor.fetchone()
+
+        if registro:
+            # Actualizar
+            cursor.execute("""
+                UPDATE asistencia
+                SET hora_entrada=%s, salida_comida=%s, entrada_tarde=%s, hora_salida=%s, hora_extra=%s
+                WHERE personal_id=%s AND fecha=%s
+            """, (entrada_manana or None, salida_comida or None, entrada_tarde or None, salida_tarde or None, hora_extra or None, id_personal, fecha))
+            modificaciones_realizadas = True
+        else:
+            # Insertar nuevo
+            cursor.execute("""
+                INSERT INTO asistencia (personal_id, fecha, hora_entrada, salida_comida, entrada_tarde, hora_salida, hora_extra)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (id_personal, fecha, entrada_manana or None, salida_comida or None, entrada_tarde or None, salida_tarde or None, hora_extra or None))
+            modificaciones_realizadas = True
+
+        if modificaciones_realizadas:
+            db.commit()
+            return jsonify({"status": "success", "message": "Registro actualizado correctamente."})
+        else:
+            return jsonify({"status": "success", "message": "No hubo cambios."})
+
+    except Exception as e:
+        db.rollback()
+        print(f"Error crítico en actualizar_asistencia: {e}")
+        return jsonify({"status": "error", "message": str(e)})
+
 
 
 # -------------------------------

@@ -5,17 +5,16 @@
   <title>Lista de Personal</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style2.css') }}">
   <style>
-    /* Colores por puesto (puedes agregar más) */
     {% set colores = {
         'Regiduría': '#AED6F1',
         'Administrativo': '#A9DFBF',
         'Directores': '#F9E79F',
         'Secretarios': '#F9E79F',
         'Empleado': '#F5B7B1',
-        'Policias': '#F9E79F'
+        'Policias': '#F9E79F',
+        'Estudiante': '#D7BDE2'
     } %}
 
-    /* Estilo del buscador */
     .buscador {
       width: 50%;
       padding: 8px 12px;
@@ -25,23 +24,33 @@
       border-radius: 5px;
       font-size: 14px;
     }
+
+    .separador-puesto {
+      font-weight: bold;
+      text-align: center;
+      font-size: 16px;
+    }
+
+    .foto-empleado {
+      width: 50px;
+      height: 50px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
 
-  <!-- Encabezado con logos -->
   <header>
     <img src="{{ url_for('static', filename='img/escudomx.png') }}" class="logo left" alt="Escudo MX">
     <h2>Lista de Personal Registrado</h2>
     <img src="{{ url_for('static', filename='img/Logousila2.png') }}" class="logo right" alt="Logo Usila">
   </header>
 
-  <!-- Botón para volver al index -->
   <div style="margin: 20px;">
-    <a href="{{ url_for('home') }}" class="btn btn-volver">⬅ Volver a Inicio</a>
+    <a href="{{ url_for('admin_index') }}" class="btn btn-volver">⬅ Volver</a>
   </div>
 
-  <!-- Buscador -->
   <input type="text" id="buscador" class="buscador" placeholder="Buscar personal por nombre, CURP o puesto..." onkeyup="filtrarTabla()">
 
   <table id="tablaPersonal">
@@ -57,14 +66,12 @@
       </tr>
     </thead>
     <tbody>
-      {% set puesto_actual = None %}
-      {% for p in personal %}
-        {% if puesto_actual != p.puesto %}
-          <tr class="separador-puesto" style="background-color: {{ colores.get(p.puesto, '#D7DBDD') }}">
-            <td colspan="7">{{ p.puesto }}</td>
-          </tr>
-          {% set puesto_actual = p.puesto %}
-        {% endif %}
+      {% for puesto, lista in personal_por_puesto.items() %}
+        <tr class="separador-puesto" style="background-color: {{ colores.get(puesto, '#D7DBDD') }}">
+          <td colspan="7">{{ puesto }}</td>
+        </tr>
+
+        {% for p in lista %}
         <tr>
           <td>{{ loop.index }}</td>
           <td>{{ p.nombre }} {{ p.apellido_p }} {{ p.apellido_m }}</td>
@@ -94,18 +101,17 @@
             </form>
           </td>
         </tr>
+        {% endfor %}
       {% endfor %}
     </tbody>
   </table>
 
-  <!-- Modal para mostrar imagen ampliada -->
   <div id="modalImagen" class="modal" onclick="cerrarModal(event)">
     <span class="cerrar" onclick="cerrarModal(event)">&times;</span>
     <img id="imagenModal" src="" alt="Imagen ampliada">
   </div>
 
   <script>
-    // Abrir modal con la imagen seleccionada
     function abrirModal(imgElement) {
       const modal = document.getElementById("modalImagen");
       const modalImg = document.getElementById("imagenModal");
@@ -113,7 +119,6 @@
       modalImg.src = imgElement.src;
     }
 
-    // Cerrar modal
     function cerrarModal(event) {
       const modal = document.getElementById("modalImagen");
       if (event.target === modal || event.target.classList.contains("cerrar")) {
@@ -121,18 +126,11 @@
       }
     }
 
-    // Filtrar tabla
     function filtrarTabla() {
       const input = document.getElementById("buscador").value.toLowerCase();
       const filas = document.querySelectorAll("#tablaPersonal tbody tr");
-      let mostrar = true;
-
       filas.forEach(fila => {
-        // Saltar las filas separadoras de puesto
-        if (fila.classList.contains("separador-puesto")) {
-          fila.style.display = '';
-          return;
-        }
+        if (fila.classList.contains("separador-puesto")) return;
         const textoFila = fila.innerText.toLowerCase();
         fila.style.display = textoFila.includes(input) ? '' : 'none';
       });

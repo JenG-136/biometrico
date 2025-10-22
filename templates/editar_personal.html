@@ -15,109 +15,109 @@
     <br>
 
     <form method="POST" action="{{ url_for('editar_personal', id=empleado['id']) }}" enctype="multipart/form-data">
-  <!-- Foto y Nombre -->
-  <div class="info-top">
-    <div class="foto-container">
-      {% if empleado['foto'] %}
-        <img src="{{ url_for('static', filename='uploads/' ~ empleado['foto']) }}" alt="Foto del Empleado">
-      {% else %}
-        <p>Sin foto</p>
-      {% endif %}
-      <br><br>
-      <input type="file" name="foto" accept="image/*">
-    </div>
-    <div class="nombre-container">
-      <h3>
-        <input type="text" name="nombre" value="{{ empleado['nombre'] }}" required>
-        <input type="text" name="apellido_p" value="{{ empleado['apellido_p'] }}" required>
-        <input type="text" name="apellido_m" value="{{ empleado['apellido_m'] }}" required>
-      </h3>
-      <p>ID: {{ empleado['id'] }}</p>
-    </div>
-  </div>
+      <!-- Foto y Nombre -->
+      <div class="info-top">
+        <div class="foto-container">
+          {% if empleado['foto'] %}
+            <img src="{{ url_for('static', filename='uploads/' ~ empleado['foto']) }}" alt="Foto del Empleado">
+          {% else %}
+            <p>Sin foto</p>
+          {% endif %}
+          <br><br>
+          <input type="file" name="foto" accept="image/*">
+        </div>
+        <div class="nombre-container">
+          <h3>
+            <input type="text" name="nombre" value="{{ empleado['nombre'] }}" required>
+            <input type="text" name="apellido_p" value="{{ empleado['apellido_p'] }}" required>
+            <input type="text" name="apellido_m" value="{{ empleado['apellido_m'] }}" required>
+          </h3>
+          <p>ID: {{ empleado['id'] }}</p>
+        </div>
+      </div>
 
-  <!-- Datos en tabla (editables) -->
-  <table class="datos-tabla">
-    <tr>
-      <td><strong>Fecha de Nacimiento:</strong></td>
-      <td><input type="date" name="fecha_nac" value="{{ empleado['fecha_nac'] }}" required></td>
-    </tr>
-    <tr>
-      <td><strong>CURP:</strong></td>
-      <td><input type="text" name="curp" value="{{ empleado['curp'] }}" required></td>
-    </tr>
-    <tr>
-      <td><strong>Edad:</strong></td>
-      <td><input type="number" name="edad" value="{{ empleado['edad'] }}" required></td>
-    </tr>
-    <tr>
-      <td><strong>Calle:</strong></td>
-      <td><input type="text" name="calle" value="{{ empleado['calle'] }}" required></td>
-    </tr>
-    <tr>
-      <td><strong>Colonia:</strong></td>
-      <td><input type="text" name="colonia" value="{{ empleado['colonia'] }}" required></td>
-    </tr>
-    <tr>
-      <td><strong>Puesto:</strong></td>
-      <td><input type="text" name="puesto" value="{{ empleado['puesto'] }}" required></td>
-    </tr>
-    <tr>
-      <td><strong>Teléfono:</strong></td>
-      <td><input type="text" name="telefono" value="{{ empleado['telefono'] }}" required></td>
-    </tr>
-    <tr>
-      <td><strong>Género:</strong></td>
-      <td>
-        <select name="genero" required>
-          <option value="M" {% if empleado['genero']=='M' %}selected{% endif %}>Masculino</option>
-          <option value="F" {% if empleado['genero']=='F' %}selected{% endif %}>Femenino</option>
-        </select>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>Estatus:</strong></td>
-      <td>
-        <select name="estatus" required>
-          <option value="Activo" {% if empleado['estatus']=='Activo' %}selected{% endif %}>Activo</option>
-          <option value="Inactivo" {% if empleado['estatus']=='Inactivo' %}selected{% endif %}>Inactivo</option>
-        </select>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>Turno:</strong></td>
-      <td>
-        <select name="turno" required>
-          <option value="turno1" {% if empleado['turno']=='turno1' %}selected{% endif %}>Turno 1 (9-14 / 16-19)</option>
-          <option value="turno2" {% if empleado['turno']=='turno2' %}selected{% endif %}>Turno 2 (14-19)</option>
-        </select>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>Fecha de Ingreso:</strong></td>
-      <td><input type="date" name="fecha_ingreso" value="{{ empleado['fecha_ingreso'] }}" required></td>
-    </tr>
-  </table>
+      <!-- Datos en tabla (editables) -->
+      <table class="datos-tabla">
+        <tr>
+          <td><strong>Fecha de Nacimiento:</strong></td>
+          <td><input type="date" name="fecha_nac" value="{{ empleado['fecha_nac'] }}" required></td>
+        </tr>
+        <tr>
+          <td><strong>CURP:</strong></td>
+          <td><input type="text" name="curp" value="{{ empleado['curp'] }}" required></td>
+        </tr>
+        <tr>
+          <td><strong>Edad:</strong></td>
+          <td><input type="number" name="edad" value="{{ empleado['edad'] }}" required></td>
+        </tr>
+        <tr>
+          <td><strong>Calle:</strong></td>
+          <td><input type="text" name="calle" value="{{ empleado['calle'] }}" required></td>
+        </tr>
+        <tr>
+          <td><strong>Colonia:</strong></td>
+          <td><input type="text" name="colonia" value="{{ empleado['colonia'] }}" required></td>
+        </tr>
+        <tr>
+          <td><strong>Puesto:</strong></td>
+          <td><input type="text" name="puesto" value="{{ empleado['puesto'] }}" required></td>
+        </tr>
+        <tr>
+          <td><strong>Teléfono:</strong></td>
+          <td><input type="text" name="telefono" value="{{ empleado['telefono'] }}" required></td>
+        </tr>
+        <tr>
+          <td><strong>Género:</strong></td>
+          <td>
+            <select name="genero" required>
+              <option value="M" {% if empleado['genero']=='M' %}selected{% endif %}>Masculino</option>
+              <option value="F" {% if empleado['genero']=='F' %}selected{% endif %}>Femenino</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Estatus:</strong></td>
+          <td>
+            <select name="estatus" required>
+              <option value="Activo" {% if empleado['estatus']=='Activo' %}selected{% endif %}>Activo</option>
+              <option value="Inactivo" {% if empleado['estatus']=='Inactivo' %}selected{% endif %}>Inactivo</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Turno:</strong></td>
+          <td>
+            <select name="turno" required>
+              <option value="turno1" {% if empleado['turno']=='turno1' %}selected{% endif %}>Turno 1 (9-14 / 16-19)</option>
+              <option value="turno2" {% if empleado['turno']=='turno2' %}selected{% endif %}>Turno 2 (14-19)</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Fecha de Ingreso:</strong></td>
+          <td><input type="date" name="fecha_ingreso" value="{{ empleado['fecha_ingreso'] }}" required></td>
+        </tr>
+      </table>
 
-  <!-- Huella Digital -->
-  <div class="huella-container">
-    <h4>Huella Digital</h4>
-    {% if empleado['huella'] %}
-      <img src="{{ url_for('static', filename='uploads/huellas/' ~ empleado['huella']) }}" alt="Huella Digital">
-    {% else %}
-      <p>Sin huella registrada</p>
-    {% endif %}
-  </div>
+      <!-- Huella Digital -->
+      <div class="huella-container">
+        <h4>Huella Digital</h4>
+        {% if empleado['huella'] %}
+          <img src="{{ url_for('static', filename='uploads/huellas/' ~ empleado['huella']) }}" alt="Huella Digital">
+        {% else %}
+          <p>Sin huella registrada</p>
+        {% endif %}
+      </div>
 
-  <br>
-
-  <div style="text-align:center; margin-top:20px;">
-    <button type="submit" class="btn">Guardar Cambios</button>
-  </div>
-</form>
+      <br>
+      <div style="text-align:center; margin-top:20px;">
+        <button type="submit" class="btn">Guardar Cambios</button>
+      </div>
+    </form>
 
     <br>
     <a href="{{ url_for('ver_personal') }}" class="btn-volver">Volver</a>
   </div>
 </body>
 </html>
+

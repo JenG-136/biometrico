@@ -1,322 +1,347 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Generar Reporte</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style5.css') }}">
-  <style>
-    .btn-editar {
-      padding: 3px 8px;
-      background-color: #ff9800;
-      border: none;
-      border-radius: 4px;
-      color: white;
-      cursor: pointer;
-    }
-    .btn-editar:hover {
-      background-color: #e68a00;
-    }
-    .modal {
-      display: none; 
-      position: fixed; 
-      z-index: 1000; 
-      padding-top: 50px; 
-      left: 0;
-      top: 0;
-      width: 100%; 
-      height: 100%;
-      overflow: auto; 
-      background-color: rgba(0,0,0,0.5);
-    }
-    .modal-content {
-      background-color: #fefefe;
-      margin: auto;
-      padding: 20px;
-      border: 1px solid #888;
-      width: 80%;
-      max-width: 600px;
-      border-radius: 10px;
-    }
-    .close {
-      color: #aaa;
-      float: right;
-      font-size: 28px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .close:hover {
-      color: black;
-    }
-    label { display:block; margin-top:5px; }
-    input { width: 100%; padding:5px; margin-bottom:5px; }
+    <meta charset="UTF-8">
+    <title>Generar Reporte</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style5.css') }}">
+    <style>
+        .btn-editar {
+            padding: 3px 8px;
+            background-color: #ff9800;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+        }
+        .btn-editar:hover { background-color: #e68a00; }
 
-    /* Estilos calendario */
-    .calendario-dia.domingo {
-      background-color: #ccc !important; /* gris */
-      color: #666;
-      cursor: not-allowed;
-    }
-  </style>
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            padding-top: 50px; 
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%;
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 10px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover { color: black; }
+        label { display:block; margin-top:5px; }
+        input { width: 100%; padding:5px; margin-bottom:5px; }
+
+        /* Estilos calendario */
+        .calendario-dia.domingo {
+            background-color: #ccc !important; 
+            color: #666;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
 <body>
 <header>
-  <div class="header-content">
-    <img src="{{ url_for('static', filename='img/escudomx.png') }}" class="logo left" alt="Logo Escudo">
-    <h2>Generar Reporte</h2>
-    <img src="{{ url_for('static', filename='img/Logousila2.png') }}" class="logo right" alt="Logo Usila">
-  </div>
+    <div class="header-content">
+        <img src="{{ url_for('static', filename='img/escudomx.png') }}" class="logo left" alt="Logo Escudo">
+        <h2>Generar Reporte</h2>
+        <img src="{{ url_for('static', filename='img/Logousila2.png') }}" class="logo right" alt="Logo Usila">
+    </div>
 </header>
 
 <div class="container">
-  <div class="volver-container">
-    <a href="{{ url_for('home') }}" class="btn btn-volver">⬅ Volver a Inicio</a>
-  </div>
+    <div class="volver-container">
+        <a href="{{ url_for('admin_index') }}" class="btn btn-volver">⬅ Volver</a>
+    </div>
 
-  <form method="get" action="{{ url_for('generar_reporte') }}">
-    <label for="tipo_reporte">Tipo de reporte:</label>
-    <select name="tipo_reporte" id="tipo_reporte" onchange="this.form.submit()">
-      <option value="diario" {% if tipo_reporte == 'diario' %}selected{% endif %}>Diario</option>
-      <option value="quincenal" {% if tipo_reporte == 'quincenal' %}selected{% endif %}>Quincenal</option>
-      <option value="mensual" {% if tipo_reporte == 'mensual' %}selected{% endif %}>Mensual</option>
-    </select>
+    <form method="get" action="{{ url_for('generar_reporte') }}">
+        <label for="tipo_reporte">Tipo de reporte:</label>
+        <select name="tipo_reporte" id="tipo_reporte" onchange="this.form.submit()">
+            <option value="diario" {% if tipo_reporte == 'diario' %}selected{% endif %}>Diario</option>
+            <option value="quincenal" {% if tipo_reporte == 'quincenal' %}selected{% endif %}>Quincenal</option>
+            <option value="mensual" {% if tipo_reporte == 'mensual' %}selected{% endif %}>Mensual</option>
+        </select>
+
+        {% if tipo_reporte == 'diario' %}
+            <label>Mes:</label>
+            <select name="mes" onchange="this.form.submit()">
+                {% for m in range(1,13) %}
+                    <option value="{{m}}" {% if m == mes %}selected{% endif %}>{{m}}</option>
+                {% endfor %}
+            </select>
+            <label>Año:</label>
+            <input type="number" name="year" min="2023" max="2030" value="{{year}}" onchange="this.form.submit()">
+        {% else %}
+            <label>Mes:</label>
+            <input type="number" name="mes" min="1" max="12" value="{{mes}}" onchange="this.form.submit()">
+            {% if tipo_reporte == 'quincenal' %}
+                <label>Quincena:</label>
+                <select name="quincena" onchange="this.form.submit()">
+                    <option value="1" {% if quincena == 1 %}selected{% endif %}>1-15</option>
+                    <option value="2" {% if quincena == 2 %}selected{% endif %}>16-fin de mes</option>
+                </select>
+            {% endif %}
+        {% endif %}
+    </form>
+
+    <hr>
 
     {% if tipo_reporte == 'diario' %}
-      <label>Mes:</label>
-      <select name="mes" onchange="this.form.submit()">
-        {% for m in range(1,13) %}
-          <option value="{{m}}" {% if m == mes %}selected{% endif %}>{{m}}</option>
-        {% endfor %}
-      </select>
-      <label>Año:</label>
-      <input type="number" name="year" min="2023" max="2030" value="{{year}}" onchange="this.form.submit()">
-    {% else %}
-      <label>Mes:</label>
-      <input type="number" name="mes" min="1" max="12" value="{{mes}}" onchange="this.form.submit()">
-      {% if tipo_reporte == 'quincenal' %}
-        <label>Quincena:</label>
-        <select name="quincena" onchange="this.form.submit()">
-          <option value="1" {% if quincena == 1 %}selected{% endif %}>1-15</option>
-          <option value="2" {% if quincena == 2 %}selected{% endif %}>16-fin de mes</option>
-        </select>
-      {% endif %}
-    {% endif %}
-  </form>
-
-  <hr>
-
-  {% if tipo_reporte == 'diario' %}
+    <!-- CALENDARIO -->
     <div class="calendario-container">
-      <h3>Asistencia del Mes</h3>
-      <div class="calendario-dias-semana">
-        <div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div>
-      </div>
-      <div class="calendario-grid">
-        {% set first_weekday = calendar.monthrange(year, mes)[0] %}
-        {% set num_days = calendar.monthrange(year, mes)[1] %}
-        {% set dias_mes = range(1, num_days + 1) %}
-        {% for _ in range(first_weekday) %}<div class="calendario-dia empty"></div>{% endfor %}
-        {% for dia in dias_mes %}
-          {% set fecha_str = "%04d-%02d-%02d"|format(year, mes, dia) %}
-          {% set info = calendario.get(fecha_str) %}
-          {% set dia_semana = (loop.index0 + first_weekday) % 7 %}  {# 0=lunes, 6=domingo #}
-
-          {% if dia_semana == 6 %}
-            <div class="calendario-dia domingo">{{ dia }}</div>
-          {% else %}
-            {% set clase_dia = 'falto' %}
-            {% if info and info|length > 0 %}{% set clase_dia = 'asistio' %}{% endif %}
-            <div class="calendario-dia {{ clase_dia }}" onclick="mostrarEmpleados('{{fecha_str}}')">{{ dia }}</div>
-          {% endif %}
-        {% endfor %}
-      </div>
+        <h3>Asistencia del Mes</h3>
+        <div class="calendario-dias-semana">
+            <div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div>
+        </div>
+        <div class="calendario-grid">
+            {% set first_weekday = calendar.monthrange(year, mes)[0] %}
+            {% set num_days = calendar.monthrange(year, mes)[1] %}
+            {% set dias_mes = range(1, num_days + 1) %}
+            {% for _ in range(first_weekday) %}<div class="calendario-dia empty"></div>{% endfor %}
+            {% for dia in dias_mes %}
+                {% set fecha_str = "%04d-%02d-%02d"|format(year, mes, dia) %}
+                {% set info = calendario.get(fecha_str) %}
+                {% set dia_semana = (loop.index0 + first_weekday) % 7 %}
+                {% if dia_semana == 6 %}
+                    <div class="calendario-dia domingo">{{ dia }}</div>
+                {% else %}
+                    {% set clase_dia = 'falto' %}
+                    {% if info and info|length > 0 %}{% set clase_dia = 'asistio' %}{% endif %}
+                    <div class="calendario-dia {{ clase_dia }}" onclick="mostrarEmpleados('{{fecha_str}}')">{{ dia }}</div>
+                {% endif %}
+            {% endfor %}
+        </div>
     </div>
 
-    <!-- Modal principal -->
+    <!-- MODAL EMPLEADOS -->
     <div id="modalEmpleados" class="modal">
-      <div class="modal-content">
-        <span class="close" onclick="cerrarModal()">&times;</span>
-        <h3 id="modalFecha"></h3>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nombre Completo</th>
-              <th>Entrada Mañana</th>
-              <th>Salida Comida</th>
-              <th>Entrada Tarde</th>
-              <th>Salida Tarde</th>
-              <th>Horas Extra</th>
-              <th>Editar</th>
-            </tr>
-          </thead>
-          <tbody id="listaEmpleados"></tbody>
-        </table>
-      </div>
+        <div class="modal-content">
+            <span class="close" onclick="cerrarModal()">&times;</span>
+            <h3 id="modalFecha"></h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th><th>Nombre Completo</th><th>Entrada Mañana</th>
+                        <th>Salida Comida</th><th>Entrada Tarde</th><th>Salida Tarde</th>
+                        <th>Horas Extra</th><th>Editar</th>
+                    </tr>
+                </thead>
+                <tbody id="listaEmpleados"></tbody>
+            </table>
+        </div>
     </div>
 
-    <!-- Modal edición -->
+    <!-- MODAL EDITAR -->
     <div id="modalEditar" class="modal">
-      <div class="modal-content">
-        <span class="close" onclick="cerrarModalEditar()">&times;</span>
-        <h3 id="tituloEditar"></h3>
-        <form id="formEditar" onsubmit="guardarEdicion(event)">
-          <input type="hidden" id="editId">
-          <input type="hidden" id="editFecha">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarModalEditar()">&times;</span>
+            <h3 id="tituloEditar"></h3>
+            <form id="formEditar" onsubmit="guardarEdicion(event)">
+                <input type="hidden" id="editId">
+                <input type="hidden" id="editFecha">
 
-          <label>Entrada Mañana:</label>
-          <input type="time" id="entrada_manana">
+                <label>Entrada Mañana:</label>
+                <input type="time" id="entrada_manana" step="1">
 
-          <label>Salida Comida:</label>
-          <input type="time" id="salida_comida">
+                <label>Salida Comida:</label>
+                <input type="time" id="salida_comida" step="1">
 
-          <label>Entrada Tarde:</label>
-          <input type="time" id="entrada_tarde">
+                <label>Entrada Tarde:</label>
+                <input type="time" id="entrada_tarde" step="1">
 
-          <label>Salida Tarde:</label>
-          <input type="time" id="salida_tarde">
+                <label>Salida Tarde:</label>
+                <input type="time" id="salida_tarde" step="1">
 
-          <label>Horas Extra:</label>
-          <input type="number" id="horas_extra" min="0" step="0.1"><br>
+                <label>Horas Extra:</label>
+                <input type="number" id="horas_extra" min="0" step="0.1"><br>
 
-          <button type="submit" class="btn-editar">Guardar Cambios</button>
-        </form>
-      </div>
+                <button type="submit" class="btn-editar">Guardar Cambios</button>
+            </form>
+        </div>
     </div>
+
+    <!-- TOAST -->
+    <div id="toast" style="
+        visibility: hidden;
+        min-width: 250px;
+        margin-left: -125px;
+        background-color: #4CAF50;
+        color: white;
+        text-align: center;
+        border-radius: 4px;
+        padding: 12px;
+        position: fixed;
+        z-index: 10000;
+        left: 50%;
+        bottom: 30px;
+        font-size: 16px;
+        box-shadow: 0px 0px 10px rgba(0,0,0,0.3);
+    ">¡Guardado exitosamente!</div>
 
     <script>
-      const empleadosPorFecha = {
-        {% for fecha, lista in calendario.items() %}
-          '{{fecha}}': [
-            {% for e in lista %}
-            {
-              'id': '{{e.id}}',
-              'nombre_completo': '{{e.nombre_completo}}',
-              'entrada_manana': '{{e.entrada_manana}}',
-              'salida_comida': '{{e.salida_comida}}',
-              'entrada_tarde': '{{e.entrada_tarde}}',
-              'salida_tarde': '{{e.salida_tarde}}',
-              'horas_extra': '{{e.horas_extra}}',
-              'fecha': '{{fecha}}'
-            },
+        const empleadosPorFecha = {
+            {% for fecha, lista in calendario.items() %}
+                '{{fecha}}': [
+                    {% for e in lista %}
+                    {
+                        'id': '{{e.id}}',
+                        'nombre_completo': '{{e.nombre_completo}}',
+                        'entrada_manana': '{{e.entrada_manana}}',
+                        'salida_comida': '{{e.salida_comida}}',
+                        'entrada_tarde': '{{e.entrada_tarde}}',
+                        'salida_tarde': '{{e.salida_tarde}}',
+                        'horas_extra': '{{e.horas_extra}}',
+                        'fecha': '{{fecha}}'
+                    },
+                    {% endfor %}
+                ],
             {% endfor %}
-          ],
-        {% endfor %}
-      };
-
-      function mostrarEmpleados(fecha) {
-        const empleados = empleadosPorFecha[fecha] || [];
-        document.getElementById('modalFecha').innerText = 'Empleados que asistieron el ' + fecha;
-        const tbody = document.getElementById('listaEmpleados');
-        tbody.innerHTML = '';
-
-        if (empleados.length === 0) {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `<td colspan="8">Nadie</td>`;
-          tbody.appendChild(tr);
-        } else {
-          empleados.forEach(e => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-              <td>${e.id}</td>
-              <td>${e.nombre_completo}</td>
-              <td>${e.entrada_manana}</td>
-              <td>${e.salida_comida}</td>
-              <td>${e.entrada_tarde}</td>
-              <td>${e.salida_tarde}</td>
-              <td>${e.horas_extra}</td>
-              <td><button class="btn-editar" onclick="editarEmpleado('${e.id}', '${e.fecha}')">Editar</button></td>
-            `;
-            tbody.appendChild(tr);
-          });
-        }
-        document.getElementById('modalEmpleados').style.display = 'block';
-      }
-
-      function cerrarModal() { document.getElementById('modalEmpleados').style.display = 'none'; }
-      function cerrarModalEditar() { document.getElementById('modalEditar').style.display = 'none'; }
-
-      function editarEmpleado(id, fecha) {
-        const empleado = empleadosPorFecha[fecha].find(e => e.id == id);
-        if (!empleado) return;
-
-        document.getElementById('editId').value = id;
-        document.getElementById('editFecha').value = fecha;
-        document.getElementById('entrada_manana').value = empleado.entrada_manana !== '-' ? empleado.entrada_manana : '';
-        document.getElementById('salida_comida').value = empleado.salida_comida !== '-' ? empleado.salida_comida : '';
-        document.getElementById('entrada_tarde').value = empleado.entrada_tarde !== '-' ? empleado.entrada_tarde : '';
-        document.getElementById('salida_tarde').value = empleado.salida_tarde !== '-' ? empleado.salida_tarde : '';
-        document.getElementById('horas_extra').value = empleado.horas_extra;
-
-        document.getElementById('tituloEditar').innerText = 'Editar asistencia de ' + empleado.nombre_completo + ' (' + fecha + ')';
-        document.getElementById('modalEditar').style.display = 'block';
-      }
-
-      function guardarEdicion(event) {
-        event.preventDefault();
-        const data = {
-          id: document.getElementById('editId').value,
-          fecha: document.getElementById('editFecha').value,
-          entrada_manana: document.getElementById('entrada_manana').value,
-          salida_comida: document.getElementById('salida_comida').value,
-          entrada_tarde: document.getElementById('entrada_tarde').value,
-          salida_tarde: document.getElementById('salida_tarde').value,
-          horas_extra: document.getElementById('horas_extra').value
         };
 
-        fetch('/actualizar_asistencia', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        })
-        .then(res => res.json())
-        .then(resp => {
-          if (resp.success) {
-            alert('Asistencia actualizada correctamente');
-            cerrarModalEditar();
-            mostrarEmpleados(data.fecha); 
-          } else {
-            alert('Error: ' + resp.error);
-          }
-        });
-      }
+        function mostrarEmpleados(fecha){
+            const empleados = empleadosPorFecha[fecha] || [];
+            document.getElementById('modalFecha').innerText = 'Empleados que asistieron el ' + fecha;
+            const tbody = document.getElementById('listaEmpleados');
+            tbody.innerHTML = '';
 
-      window.onclick = function(event) {
-        if (event.target == document.getElementById('modalEmpleados')) cerrarModal();
-        if (event.target == document.getElementById('modalEditar')) cerrarModalEditar();
-      }
+            if(empleados.length===0){
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td colspan="8">Nadie</td>`;
+                tbody.appendChild(tr);
+            } else {
+                empleados.forEach(e=>{
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${e.id}</td>
+                        <td>${e.nombre_completo}</td>
+                        <td>${e.entrada_manana}</td>
+                        <td>${e.salida_comida}</td>
+                        <td>${e.entrada_tarde}</td>
+                        <td>${e.salida_tarde}</td>
+                        <td>${e.horas_extra}</td>
+                        <td><button class="btn-editar" onclick="editarEmpleado('${e.id}','${e.fecha}')">Editar</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+            document.getElementById('modalEmpleados').style.display = 'block';
+        }
+
+        function cerrarModal(){ document.getElementById('modalEmpleados').style.display='none'; }
+        function cerrarModalEditar(){ document.getElementById('modalEditar').style.display='none'; }
+
+        function editarEmpleado(id, fecha){
+            const empleado = empleadosPorFecha[fecha].find(e=>e.id==id);
+            if(!empleado) return;
+
+            document.getElementById('editId').value = id;
+            document.getElementById('editFecha').value = fecha;
+            document.getElementById('entrada_manana').value = empleado.entrada_manana !== '-' ? empleado.entrada_manana : '';
+            document.getElementById('salida_comida').value = empleado.salida_comida !== '-' ? empleado.salida_comida : '';
+            document.getElementById('entrada_tarde').value = empleado.entrada_tarde !== '-' ? empleado.entrada_tarde : '';
+            document.getElementById('salida_tarde').value = empleado.salida_tarde !== '-' ? empleado.salida_tarde : '';
+            document.getElementById('horas_extra').value = empleado.horas_extra;
+
+            document.getElementById('tituloEditar').innerText = 'Editar asistencia de ' + empleado.nombre_completo + ' (' + fecha + ')';
+            document.getElementById('modalEditar').style.display = 'block';
+        }
+
+        function mostrarToast(mensaje, color="#4CAF50") {
+            const toast = document.getElementById('toast');
+            toast.innerText = mensaje;
+            toast.style.backgroundColor = color;
+            toast.style.visibility = 'visible';
+            toast.style.opacity = 1;
+            setTimeout(() => {
+                toast.style.transition = "opacity 0.5s ease";
+                toast.style.opacity = 0;
+                setTimeout(()=>{ toast.style.visibility='hidden'; toast.style.transition=''; }, 500);
+            }, 2000);
+        }
+
+        function guardarEdicion(event){
+            event.preventDefault();
+            const form = new FormData();
+            form.append('id', document.getElementById('editId').value);
+            form.append('fecha', document.getElementById('editFecha').value);
+            form.append('entrada_manana', document.getElementById('entrada_manana').value);
+            form.append('salida_comida', document.getElementById('salida_comida').value);
+            form.append('entrada_tarde', document.getElementById('entrada_tarde').value);
+            form.append('salida_tarde', document.getElementById('salida_tarde').value);
+            form.append('horas_extra', document.getElementById('horas_extra').value);
+
+            fetch('/actualizar_asistencia',{
+                method:'POST',
+                body: form
+            })
+            .then(res=>res.json())
+            .then(resp=>{
+                if(resp.status==='success'){
+                    const fecha = document.getElementById('editFecha').value;
+                    const id = document.getElementById('editId').value;
+                    const empleado = empleadosPorFecha[fecha].find(e=>e.id==id);
+                    empleado.entrada_manana = document.getElementById('entrada_manana').value || '-';
+                    empleado.salida_comida = document.getElementById('salida_comida').value || '-';
+                    empleado.entrada_tarde = document.getElementById('entrada_tarde').value || '-';
+                    empleado.salida_tarde = document.getElementById('salida_tarde').value || '-';
+                    empleado.horas_extra = document.getElementById('horas_extra').value || 0;
+
+                    cerrarModalEditar();
+                    mostrarEmpleados(fecha);
+
+                    mostrarToast(resp.message);
+                } else {
+                    mostrarToast('Error: '+resp.message, '#f44336');
+                }
+            });
+        }
+
+        window.onclick = function(event){
+            if(event.target == document.getElementById('modalEmpleados')) cerrarModal();
+            if(event.target == document.getElementById('modalEditar')) cerrarModalEditar();
+        }
     </script>
 
-  {% else %}
+    {% else %}
+    <!-- Reporte quincenal/mensual -->
     <table>
-      <thead>
-        <tr>
-          <th>Empleado</th>
-          <th>Días asistidos</th>
-          <th>Horas extra</th>
-          <th>Permisos</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in reporte %}
-        <tr>
-          <td>{{ r.nombre }} {{ r.apellido_p }} {{ r.apellido_m }}</td>
-          <td>{{ r.dias_asistidos }}</td>
-          <td>{{ r.horas_extra }}</td>
-          <td>{{ r.permisos }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
+        <thead>
+            <tr>
+                <th>Empleado</th><th>Días asistidos</th><th>Horas extra</th><th>Permisos</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in reporte %}
+            <tr>
+                <td>{{ r.nombre }} {{ r.apellido_p }} {{ r.apellido_m }}</td>
+                <td>{{ r.dias_asistidos }}</td>
+                <td>{{ r.horas_extra }}</td>
+                <td>{{ r.permisos }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
-
     <div style="text-align:center; margin-top:15px;">
-      <a href="{{ url_for('generar_reporte', tipo_reporte=tipo_reporte, exportar_pdf=1, quincena=request.args.get('quincena'), mes=request.args.get('mes')) }}" class="btn btn-volver" style="background-color:#2196F3;">
-        📄 Exportar PDF
-      </a>
+        <a href="{{ url_for('generar_reporte', tipo_reporte=tipo_reporte, exportar_pdf=1, quincena=request.args.get('quincena'), mes=request.args.get('mes')) }}" class="btn btn-volver" style="background-color:#2196F3;">
+            📄 Exportar PDF
+        </a>
     </div>
-
-
-    
-  {% endif %}
+    {% endif %}
 </div>
 </body>
 </html>

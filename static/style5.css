@@ -167,7 +167,7 @@ table tr:hover {
     box-shadow: 0px 1px 3px rgba(0,0,0,0.2);
     transition: transform 0.2s, box-shadow 0.2s;
     cursor: pointer;
-    background-color: #2196F3; /* Azul por defecto */
+    background-color: #2196F3; 
 }
 
 .calendario-dia:hover {
@@ -176,16 +176,16 @@ table tr:hover {
 }
 
 .calendario-dia.asistio {
-    background-color: #4CAF50; /* Verde: asistió */
+    background-color: #4CAF50; 
 }
 
 .calendario-dia.falta {
-    background-color: #F44336; /* Rojo: no asistió */
+    background-color: #F44336; 
 }
 
 .calendario-dia.permiso {
-    background-color: #FFC107; /* Amarillo: permiso justificado */
-    color: #333; /* Texto más legible sobre amarillo */
+    background-color: #FFC107; 
+    color: #333; 
 }
 
 /* Ajuste tabla para reporte quincenal/mensual */
@@ -216,11 +216,11 @@ table td {
 
 .modal-content {
     background-color: #fff;
-    margin: 5% auto;           /* Más cerca de la parte superior */
-    padding: 25px 30px;        /* Más espacio interno */
+    margin: 5% auto;           
+    padding: 25px 30px;       
     border-radius: 10px;
-    width: 600px;              /* Más ancho que antes */
-    max-height: 500px;         /* Más alto que antes */
+    width: 600px;              
+    max-height: 500px;         
     overflow-y: auto;
     position: relative;
     box-shadow: 0px 5px 15px rgba(0,0,0,0.3);

@@ -79,11 +79,11 @@ body {
 }
 
 .status-indicator.active {
-  background-color: #4CAF50; /* Verde */
+  background-color: #4CAF50; 
 }
 
 .status-indicator.inactive {
-  background-color: #E74C3C; /* Rojo */
+  background-color: #E74C3C; 
 }
 
 .huella-container {

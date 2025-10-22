@@ -1,212 +1,209 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Ver Registros - Sistema Biométrico</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style4.css') }}">
+    <meta charset="UTF-8">
+    <title>Ver Registros - Sistema Biométrico</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style4.css') }}">
 </head>
 <body>
-  <header style="position:relative;">
-    <img src="{{ url_for('static', filename='img/escudomx.png') }}" class="logo left" alt="Logo Escudo">
-    <img src="{{ url_for('static', filename='img/Logousila2.png') }}" class="logo right" alt="Logo Usila">
-    
-    <!-- Fecha y hora de México -->
-    <div id="fechaHora" style="position:absolute; top:10px; left:50%; transform:translateX(-50%); font-weight:bold;"></div>
-  </header>
+    <header style="position:relative;">
+        <img src="{{ url_for('static', filename='img/escudomx.png') }}" class="logo left" alt="Logo Escudo">
+        <img src="{{ url_for('static', filename='img/Logousila2.png') }}" class="logo right" alt="Logo Usila">
+        <div id="fechaHora" style="position:absolute; top:10px; left:50%; transform:translateX(-50%); font-weight:bold;"></div>
+    </header>
 
-  <div class="container">
-    <!-- Botón de regresar -->
-    <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-      <a href="{{ url_for('home') }}" class="btn">⬅ Volver al Inicio</a>
-      <!--botno de registra el permiso justificado-->
-      <button onclick="abrirModalViaje()" class="btn" style="background: #527a8b; color: white;"> Registrar Permiso justificado </button>
-    </div>
-
-
-
-    <h2>Registros de Asistencia - {{ fecha_actual }}</h2>
-<table>
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Nombre Completo</th>
-      <th>Entrada 9:00</th>
-      <th>Salida 14:00</th>
-      <th>Entrada 16:00</th>
-      <th>Salida 19:00</th>
-      <th>Horas Extra</th>
-      <th>Acciones</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for registro in registros %}
-      <tr>
-        <td>{{ registro.id }}</td>
-        <td>{{ registro.nombre }} {{ registro.apellido_p }} {{ registro.apellido_m }}</td>
-        <td>{{ registro.entrada_manana }}</td>
-        <td>{{ registro.salida_comida }}</td>
-        <td>{{ registro.entrada_tarde }}</td>
-        <td>{{ registro.salida_tarde }}</td>
-        <td>{{ registro.horas_extra }}</td>
-        <td>
-          <button onclick="abrirModalEditar({{ registro.id }})">Editar</button>
-          <button onclick="abrirModalExtra({{ registro.id }})">Agregar Extra</button>
-        </td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-  </div>
-
-  <!-- Modal para registrar los permiso justificado-->
-   <div id="modalViaje" class="modal" style="display:none;">
-    <div class="modal-content" style="width: 500px; padding: 20px;">
-      <form method="post" action="/registrar_viaje">
-        <h3 style="text-align: center;">Justificacion de Permiso</h3>
-
-        <label>Empleado:</label>
-<select name="empleado_id" id="selectEmpleado" required>
-  <option value="" disabled selected>Seleccione un empleado</option>
-  {% for e in personal %}
-    <option value="{{ e[0] }}">
-      {{ e[1] }} {{ e[2] }} {{ e[3] }} - {{ e[9] }}
-    </option>
-  {% endfor %}
-</select>
-
-<br><br>
-
-        <!-- Datos automáticos -->
-      <div id="datosEmpleado" style="background:#f2f2f2; padding:10px; border-radius:8px; display:none;">
-        <p><strong>Nombre completo:</strong> <span id="nombreEmpleado"></span></p>
-        <p><strong>Puesto:</strong> <span id="puestoEmpleado"></span></p>
-      </div>
-      <br><br>
-
-
-       <!-- Fecha de justificación -->
-      <label><strong>Fecha:</strong></label>
-      <input type="date" name="fecha" required style="width:100%; padding:5px;">
-      <br><br>
-
-      <!-- Motivo de la justificacion-->
-      <label><strong>Motivo:</strong></label>
-      <select name="motivo" required style="width:100%; padding:5px;">
-        <option value="viaje">Viaje de Trabajo</option>
-        <option value="enfermedad">Enfermedad</option>
-        <option value="otro">Otro</option>
-      </select>
-      <br><br>
-      
-      <!-- Botones -->
-        <div style="margin-top: 10px; text-align: center;">
-          <button type="submit" style="padding: 8px 15px; background: #527a8b; color: white; border: none; border-radius: 5px;">Guardar</button>
-          <button type="button" onclick="cerrarModalViaje()" style="padding: 8px 15px; background: #ccc; border: none; border-radius: 5px;">Cancelar</button>
+    <div class="container">
+        <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+            <a href="{{ url_for('admin_index') }}" class="btn">⬅ Volver</a>
+            <button onclick="abrirModalViaje()" class="btn" style="background: #527a8b; color: white;">Registrar Permiso justificado</button>
         </div>
-      </form>
+
+        <h2>Registros de Asistencia - {{ fecha_actual }}</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre Completo</th>
+                    <th>Entrada 9:00</th>
+                    <th>Salida 14:00</th>
+                    <th>Entrada 16:00</th>
+                    <th>Salida 19:00</th>
+                    <th>Horas Extra</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for registro in registros %}
+                    <tr id="fila-{{ registro.id }}">
+                        <td>{{ registro.id }}</td>
+                        <td>{{ registro.nombre }} {{ registro.apellido_p }} {{ registro.apellido_m }}</td>
+                        <td class="entrada_manana">{{ registro.entrada_manana or '-' }}</td>
+                        <td class="salida_comida">{{ registro.salida_comida or '-' }}</td>
+                        <td class="entrada_tarde">{{ registro.entrada_tarde or '-' }}</td>
+                        <td class="salida_tarde">{{ registro.salida_tarde or '-' }}</td>
+                        <td class="horas_extra">{{ registro.horas_extra or '-' }}</td>
+                        <td>
+                            <button onclick="abrirModalEditar({{registro.id}})">Editar</button>
+                            <button onclick="abrirModalExtra({{registro.id}})">Agregar Extra</button>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-   </div>
 
-
-  <!-- Modal Editar -->
-  <div id="modalEditar" class="modal" style="display:none;">
-    <div class="modal-content">
-      <form method="POST" action="/editar_registro">
-        <input type="hidden" id="editar_id" name="id">
-        <label>Entrada 9:00:</label>
-        <input type="time" name="entrada_manana" id="entrada_manana"><br>
-        <label>Salida 14:00:</label>
-        <input type="time" name="salida_comida" id="salida_comida"><br>
-        <label>Entrada 16:00:</label>
-        <input type="time" name="entrada_tarde" id="entrada_tarde"><br>
-        <label>Salida 19:00:</label>
-        <input type="time" name="salida_tarde" id="salida_tarde"><br>
-        <div style="margin-top:10px; text-align:center;">
-          <button type="submit">Guardar</button>
-          <button type="button" onclick="cerrarModalEditar()">Cancelar</button>
+    <!-- Modal Edición -->
+    <div id="modalEditar" class="modal" style="display:none;">
+        <div class="modal-content">
+            <form id="formEditarRegistro" onsubmit="enviarEditarRegistro(event)">
+                <input type="hidden" id="editar_id" name="id">
+                <label>Entrada 9:00:</label>
+                <input type="time" name="entrada_manana" id="entrada_manana_modal" step="1"><br>
+                <label>Salida 14:00:</label>
+                <input type="time" name="salida_comida" id="salida_comida_modal" step="1"><br>
+                <label>Entrada 16:00:</label>
+                <input type="time" name="entrada_tarde" id="entrada_tarde_modal" step="1"><br>
+                <label>Salida 19:00:</label>
+                <input type="time" name="salida_tarde" id="salida_tarde_modal" step="1"><br>
+                <div style="margin-top:10px; text-align:center;">
+                    <button type="submit">Guardar</button>
+                    <button type="button" onclick="cerrarModalEditar()">Cancelar</button>
+                </div>
+            </form>
         </div>
-      </form>
     </div>
-  </div>
 
-  <!-- Modal Agregar Horas Extra -->
-  <div id="modalExtra" class="modal" style="display:none;">
-    <div class="modal-content">
-      <form method="POST" action="/agregar_extra">
-        <input type="hidden" id="extra_id" name="id">
-        <label>Horas Extra:</label>
-        <input type="number" name="horas_extra" id="horas_extra" min="1"><br>
-        <div style="margin-top:10px; text-align:center;">
-          <button type="submit">Agregar</button>
-          <button type="button" onclick="cerrarModalExtra()">Cancelar</button>
+    <!-- Modal Justificación Permiso -->
+    <div id="modalViaje" class="modal" style="display:none;">
+        <div class="modal-content" style="width: 500px; padding: 20px;">
+            <form method="post" action="/registrar_permiso">
+                <h3 style="text-align: center;">Justificación de Permiso</h3>
+                <label>Empleado:</label>
+                <select name="empleado_id" id="selectEmpleado" onchange="mostrarDatosEmpleados()" required>
+                    <option value="" disabled selected>Seleccione un empleado</option>
+                    {% for e in personal %}
+                        <option value="{{ e.id }}" 
+                                data-nombre="{{ e.nombre }} {{ e.apellido_p }} {{ e.apellido_m }}"
+                                data-puesto="{{ e.puesto }}">
+                            {{ e.nombre }} {{ e.apellido_p }} {{ e.apellido_m }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <br><br>
+                <div id="datosEmpleado" style="background:#f2f2f2; padding:10px; border-radius:8px; display:none;">
+                    <p><strong>Nombre completo:</strong> <span id="nombreEmpleado"></span></p>
+                    <p><strong>Puesto:</strong> <span id="puestoEmpleado"></span></p>
+                </div>
+                <br><br>
+                <label><strong>Fecha:</strong></label>
+                <input type="date" name="fecha" required style="width:100%; padding:5px;" value="{{ fecha_actual }}">
+                <br><br>
+                <label><strong>Motivo:</strong></label>
+                <select name="motivo" required style="width:100%; padding:5px;">
+                    <option value="viaje">Viaje de Trabajo</option>
+                    <option value="enfermedad">Enfermedad</option>
+                    <option value="otro">Otro</option>
+                </select>
+                <br><br>
+                <div style="margin-top: 10px; text-align: center;">
+                    <button type="submit" style="padding: 8px 15px; background: #527a8b; color: white; border: none; border-radius: 5px;">Guardar</button>
+                    <button type="button" onclick="cerrarModalViaje()" style="padding: 8px 15px; background: #ccc; border: none; border-radius: 5px;">Cancelar</button>
+                </div>
+            </form>
         </div>
-      </form>
     </div>
-  </div>
 
-  <script>
-    // Funciones para mostrar modales centrados
-    function abrirModalEditar(id) {
-      document.getElementById('editar_id').value = id;
-      document.getElementById('modalEditar').style.display = 'flex';
-    }
-    function cerrarModalEditar() { document.getElementById('modalEditar').style.display = 'none'; }
+    <!-- Modal Horas Extra -->
+    <div id="modalExtra" class="modal" style="display:none;">
+        <div class="modal-content">
+            <form method="POST" action="/agregar_extra">
+                <input type="hidden" id="extra_id" name="id">
+                <label>Horas Extra:</label>
+                <input type="number" name="horas_extra" id="horas_extra" min="1" required><br>
+                <div style="margin-top:10px; text-align:center;">
+                    <button type="submit">Agregar</button>
+                    <button type="button" onclick="cerrarModalExtra()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    function abrirModalExtra(id) {
-      document.getElementById('extra_id').value = id;
-      document.getElementById('modalExtra').style.display = 'flex';
-    }
-    function cerrarModalExtra() { document.getElementById('modalExtra').style.display = 'none'; }
+    <!-- Modal Notificación Éxito -->
+    <div id="modalExito" class="modal" style="display:none; background: rgba(0,0,0,0.0); pointer-events: none;">
+        <div class="modal-content" style="background-color: #4CAF50; color: white; width: 300px; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+            <p id="mensajeExito">✅ Modificación guardada exitosamente.</p>
+        </div>
+    </div>
 
-    // Función para mostrar fecha y hora de México
+<script>
+    // Actualizar fecha y hora
     function actualizarFechaHora() {
-      const opciones = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: true,
-        timeZone: 'America/Mexico_City'
-      };
-      const ahora = new Date();
-      const fechaHoraTexto = ahora.toLocaleString('es-MX', opciones);
-      document.getElementById('fechaHora').innerText = fechaHoraTexto;
+        const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true, timeZone: 'America/Mexico_City' };
+        document.getElementById('fechaHora').innerText = new Date().toLocaleString('es-MX', opciones);
     }
-
-    // Inicializar y actualizar cada minuto
     actualizarFechaHora();
     setInterval(actualizarFechaHora, 60000);
 
-
-    //justificacion de permiso de trabajo
-    //abrir modal
-    function abrirModalViaje() {
-      document.getElementById('modalViaje').style.display = 'flex';
-    }
-    //para cerrar modal
-    function cerrarModalViaje() {
-      document.getElementById('modalViaje').style.display = 'none';
+    function cleanTime(timeStr) {
+        return (!timeStr || timeStr === '-') ? '' : timeStr;
     }
 
-    //mostrar datos del empleado seleccionado
+    // Modal Editar
+    function abrirModalEditar(id){
+        const fila = document.getElementById(`fila-${id}`);
+        if(!fila){ alert('Error: No se pudieron cargar los datos de la fila.'); return; }
+
+        document.getElementById('editar_id').value = id;
+        document.getElementById('entrada_manana_modal').value = cleanTime(fila.querySelector('.entrada_manana').textContent);
+        document.getElementById('salida_comida_modal').value = cleanTime(fila.querySelector('.salida_comida').textContent);
+        document.getElementById('entrada_tarde_modal').value = cleanTime(fila.querySelector('.entrada_tarde').textContent);
+        document.getElementById('salida_tarde_modal').value = cleanTime(fila.querySelector('.salida_tarde').textContent);
+        document.getElementById('modalEditar').style.display='flex';
+    }
+    function cerrarModalEditar(){ document.getElementById('modalEditar').style.display='none'; }
+
+    function enviarEditarRegistro(e){
+        e.preventDefault();
+        const id = document.getElementById('editar_id').value;
+        const formData = new FormData(document.getElementById('formEditarRegistro'));
+
+        fetch('/editar_registro', { method:'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status==='success'){
+                const fila = document.getElementById(`fila-${id}`);
+                fila.querySelector('.entrada_manana').textContent = formData.get('entrada_manana') || '-';
+                fila.querySelector('.salida_comida').textContent = formData.get('salida_comida') || '-';
+                fila.querySelector('.entrada_tarde').textContent = formData.get('entrada_tarde') || '-';
+                fila.querySelector('.salida_tarde').textContent = formData.get('salida_tarde') || '-';
+                cerrarModalEditar();
+                alert(data.message);
+            } else { alert('Error: ' + data.message); }
+        }).catch(err => alert('Error al conectar con el servidor: ' + err));
+    }
+
+    // Modal Justificación Permiso
+    function abrirModalViaje(){ document.getElementById('modalViaje').style.display='flex'; mostrarDatosEmpleados(); }
+    function cerrarModalViaje(){ document.getElementById('modalViaje').style.display='none'; }
     function mostrarDatosEmpleados(){
-      const select = document.getElementById('selectEmpleado');
-      const opcion = select.options[select.selectedIndex];
+        const select = document.getElementById('selectEmpleado');
+        const opcion = select.options[select.selectedIndex];
+        const nombre = opcion.getAttribute('data-nombre');
+        const puesto = opcion.getAttribute('data-puesto');
 
-      const nombre = opcion.getAttribute('data-nombre');
-      const puesto = opcion.getAttribute('data-puesto');
-
-      if(nombre && puesto) {
-        document.getElementById('datosEmpleado').style.display = 'block';
-        document.getElementById('nombreEmpleado').textContent = nombre;
-        document.getElementById('puestoEmpleado').textContent = puesto;
-      } else{
-        document.getElementById('datosEmpleado').style.display = 'none';
-      }
+        if(nombre && puesto){
+            document.getElementById('datosEmpleado').style.display='block';
+            document.getElementById('nombreEmpleado').textContent = nombre;
+            document.getElementById('puestoEmpleado').textContent = puesto;
+        } else{
+            document.getElementById('datosEmpleado').style.display='none';
+        }
     }
-  </script>
+
+    // Modal Extra
+    function abrirModalExtra(id){ document.getElementById('extra_id').value = id; document.getElementById('modalExtra').style.display='flex'; }
+    function cerrarModalExtra(){ document.getElementById('modalExtra').style.display='none'; }
+
+</script>
 </body>
 </html>
