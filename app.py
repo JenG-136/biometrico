@@ -15,6 +15,17 @@ import calendar
 from datetime import datetime, date, timedelta
 
 
+#---------------------------
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+#------------------------------------------------------------------------
+
+from flask import Response
+
+
 # -------------------------------
 # Configuración Flask
 # -------------------------------
@@ -69,11 +80,8 @@ def admin_access_post():
 
 
 
-
-
-# Ruta para buscar empleado (simulación de huella)
 #---------------------------------------------------------------------------
-# Nueva lógica de acuerdo a los cambios que se hizo en la tabla asistencia
+# Registro de asistencia con rangos de tolerancia personalizados
 #---------------------------------------------------------------------------
 
 @app.route("/buscar_empleado", methods=["POST"])
@@ -89,40 +97,50 @@ def buscar_empleado():
     hora_dt = datetime.strptime(hora_actual, "%H:%M:%S")
     fecha_hoy = date.today()
 
-    # Verificar si ya hay un registro para hoy
+    # Verificar si ya hay registro para hoy
     cursor.execute("SELECT * FROM asistencia WHERE personal_id=%s AND fecha=%s", (id_huella, fecha_hoy))
     registro = cursor.fetchone()
 
+    # RANGOS DE TIEMPO
+    entrada_inicio = datetime.strptime("08:55:00", "%H:%M:%S")
+    entrada_fin = datetime.strptime("10:30:00", "%H:%M:%S")
+    salida_comida_inicio = datetime.strptime("14:00:00", "%H:%M:%S")
+    salida_comida_fin = datetime.strptime("14:30:00", "%H:%M:%S")
+    entrada_tarde_inicio = datetime.strptime("15:55:00", "%H:%M:%S")
+    entrada_tarde_fin = datetime.strptime("17:00:00", "%H:%M:%S")
+    salida_inicio = datetime.strptime("19:00:00", "%H:%M:%S")
+    hora_extra_inicio = datetime.strptime("20:00:00", "%H:%M:%S")
+
     if not registro:
-        # Si no existe registro hoy → crear y guardar hora_entrada
-        cursor.execute("""
-            INSERT INTO asistencia (personal_id, fecha, hora_entrada)
-            VALUES (%s, %s, %s)
-        """, (id_huella, fecha_hoy, hora_actual))
+        # Si no hay registro hoy y la hora está en el rango de entrada de la mañana
+        if entrada_inicio <= hora_dt <= entrada_fin:
+            cursor.execute("""
+                INSERT INTO asistencia (personal_id, fecha, hora_entrada)
+                VALUES (%s, %s, %s)
+            """, (id_huella, fecha_hoy, hora_actual))
+            tipo = "entrada_mañana"
+        else:
+            return jsonify({"error": "Fuera de rango de entrada"}), 400
         db.commit()
-        tipo = "entrada_mañana"
 
     else:
-        # Si ya existe, determinar qué campo falta por registrar
-        if not registro["salida_comida"] and hora_dt < datetime.strptime("14:00:00", "%H:%M:%S"):
+        # Ya existe registro → verificar siguiente campo
+        if not registro["salida_comida"] and salida_comida_inicio <= hora_dt <= salida_comida_fin:
             cursor.execute("UPDATE asistencia SET salida_comida=%s WHERE id=%s", (hora_actual, registro["id"]))
             tipo = "salida_comida"
 
-        elif not registro["entrada_tarde"] and hora_dt < datetime.strptime("17:00:00", "%H:%M:%S"):
+        elif not registro["entrada_tarde"] and entrada_tarde_inicio <= hora_dt <= entrada_tarde_fin:
             cursor.execute("UPDATE asistencia SET entrada_tarde=%s WHERE id=%s", (hora_actual, registro["id"]))
             tipo = "entrada_tarde"
 
-        elif not registro["hora_salida"]:
+        elif not registro["hora_salida"] and hora_dt >= salida_inicio:
             cursor.execute("UPDATE asistencia SET hora_salida=%s WHERE id=%s", (hora_actual, registro["id"]))
             tipo = "salida_tarde"
 
-            # ---- NUEVA LÓGICA: horas extra automáticas después de las 20:00 ----
-            hora_extra_inicio = datetime.strptime("20:00:00", "%H:%M:%S")
+            # Calcular horas extra si sale después de las 20:00
             if hora_dt > hora_extra_inicio:
-                # Calcular diferencia en horas completas
                 diferencia = (hora_dt - hora_extra_inicio).seconds / 3600
-                horas_extra = round(diferencia, 2)  # Ej. 1.5, 2.25, etc.
-                # Guardar automáticamente en la columna hora_extra
+                horas_extra = round(diferencia, 2)
                 cursor.execute("""
                     UPDATE asistencia 
                     SET hora_extra = SEC_TO_TIME(ROUND(%s * 3600))
@@ -131,10 +149,11 @@ def buscar_empleado():
                 tipo = "salida_tarde_con_extra"
 
         else:
-            tipo = "ya_registrado"
+            tipo = "fuera_de_rango"  # Si intenta registrar fuera del rango válido
 
         db.commit()
 
+    # Cálculo del retraso respecto a las 09:00
     retraso_min = max(
         0,
         int((hora_dt - datetime.strptime("09:00:00", "%H:%M:%S")).total_seconds() / 60)
@@ -148,9 +167,6 @@ def buscar_empleado():
         "tipo": tipo,
         "retraso": f"{retraso_min} min" if retraso_min > 0 else "A tiempo"
     })
-
-
-
 
 
 #acceso de administrador
@@ -592,60 +608,61 @@ def generar_reporte():
     # --- Reporte diario ---
     # --------------------------------------------------------------------------
     if tipo_reporte == 'diario':
+        # Traer todos los empleados activos
+        cursor.execute("SELECT id, nombre, apellido_p, apellido_m FROM personal ORDER BY id")
+        empleados = cursor.fetchall()
+
+        # Obtener todas las asistencias
         cursor.execute("""
             SELECT a.fecha, p.id, p.nombre, p.apellido_p, p.apellido_m,
-                   a.hora_entrada,
-                   a.salida_comida,
-                   a.entrada_tarde,
-                   a.hora_salida,
-                   a.hora_extra
-            FROM personal p
-            LEFT JOIN asistencia a 
-            ON p.id = a.personal_id AND MONTH(a.fecha) = %s AND YEAR(a.fecha) = %s
-            ORDER BY a.fecha, p.id
+                   a.hora_entrada, a.salida_comida, a.entrada_tarde, a.hora_salida, a.hora_extra
+            FROM asistencia a
+            INNER JOIN personal p ON a.personal_id = p.id
+            WHERE MONTH(a.fecha) = %s AND YEAR(a.fecha) = %s
         """, (mes, year))
-        registros = cursor.fetchall()
+        registros_asistencia = cursor.fetchall()
 
-        for fila in registros:
-            fecha = fila['fecha']
-            if fecha is None:
-                continue
+        # Convertir a diccionario 
+        asistencias_por_fecha = defaultdict(dict)
+        for fila in registros_asistencia:
+            fecha_str = fila['fecha'].strftime("%Y-%m-%d")
+            asistencias_por_fecha[fecha_str][fila['id']] = fila
 
+        # Generar calendario completo
+        num_dias = calendar.monthrange(year, mes)[1]
+        for dia in range(1, num_dias + 1):
+            fecha = date(year, mes, dia)
             fecha_str = fecha.strftime("%Y-%m-%d")
-            dia_semana = fecha.weekday()  # 0 = lunes, 6 = domingo
-            horas_extra = fila['hora_extra'] if fila['hora_extra'] is not None else 0
+            dia_semana = fecha.weekday()  # 0=lunes, 6=domingo
 
-            # --- Domingo: se omite ---
+            # Omitir domingos
             if dia_semana == 6:
                 continue
 
-            # --- Sábado ---
-            if dia_semana == 5:
-                entrada_manana = str(fila['hora_entrada']) if fila['hora_entrada'] else '-'
-                salida_tarde = str(fila['hora_salida']) if fila['hora_salida'] else '-'
+            # Para cada empleado, agregar su registro o vacío
+            for emp in empleados:
+                registro = asistencias_por_fecha.get(fecha_str, {}).get(emp['id'])
 
-                if entrada_manana != '-' and entrada_manana < "09:00:00":
-                    entrada_manana = "09:00:00"
-                if salida_tarde != '-' and salida_tarde > "13:00:00":
-                    salida_tarde = "13:00:00"
+                if registro:  # Tiene asistencia
+                    entrada_manana = str(registro['hora_entrada']) if registro['hora_entrada'] else '-'
+                    salida_comida = str(registro['salida_comida']) if registro['salida_comida'] else '-'
+                    entrada_tarde = str(registro['entrada_tarde']) if registro['entrada_tarde'] else '-'
+                    salida_tarde = str(registro['hora_salida']) if registro['hora_salida'] else '-'
+                    horas_extra = registro['hora_extra'] if registro['hora_extra'] else 0
+                else:  # No registró asistencia ese día
+                    entrada_manana = '-'
+                    salida_comida = '-'
+                    entrada_tarde = '-'
+                    salida_tarde = '-'
+                    horas_extra = 0
 
                 calendario[fecha_str].append({
-                    'id': fila['id'],
-                    'nombre_completo': f"{fila['nombre']} {fila['apellido_p']} {fila['apellido_m']}",
+                    'id': emp['id'],
+                    'nombre_completo': f"{emp['nombre']} {emp['apellido_p']} {emp['apellido_m']}",
                     'entrada_manana': entrada_manana,
-                    'salida_comida': '-',
-                    'entrada_tarde': '-',
+                    'salida_comida': salida_comida,
+                    'entrada_tarde': entrada_tarde,
                     'salida_tarde': salida_tarde,
-                    'horas_extra': horas_extra
-                })
-            else:  # Lunes a Viernes
-                calendario[fecha_str].append({
-                    'id': fila['id'],
-                    'nombre_completo': f"{fila['nombre']} {fila['apellido_p']} {fila['apellido_m']}",
-                    'entrada_manana': str(fila['hora_entrada']) if fila['hora_entrada'] else '-',
-                    'salida_comida': str(fila['salida_comida']) if fila['salida_comida'] else '-',
-                    'entrada_tarde': str(fila['entrada_tarde']) if fila['entrada_tarde'] else '-',
-                    'salida_tarde': str(fila['hora_salida']) if fila['hora_salida'] else '-',
                     'horas_extra': horas_extra
                 })
 
@@ -666,27 +683,31 @@ def generar_reporte():
             ultimo_dia = calendar.monthrange(year, mes)[1]
             fin = f"{year}-{mes:02d}-{ultimo_dia}"
 
+        # ✅ Incluye el ID y el puesto del empleado
         cursor.execute("""
-            SELECT p.nombre, p.apellido_p, p.apellido_m,
+            SELECT p.id, p.nombre, p.apellido_p, p.apellido_m, p.puesto,
                    COUNT(DISTINCT CASE WHEN a.hora_entrada IS NOT NULL OR a.entrada_tarde IS NOT NULL THEN a.fecha END) AS dias_asistidos,
                    SUM(CASE WHEN a.hora_extra IS NOT NULL THEN TIME_TO_SEC(a.hora_extra)/3600 ELSE 0 END) AS horas_extra,
-                    COUNT(DISTINCT perm.id) AS permisos
+                   COUNT(DISTINCT perm.id) AS permisos
             FROM personal p
             LEFT JOIN asistencia a 
-            ON a.personal_id = p.id AND a.fecha BETWEEN %s AND %s
+                ON a.personal_id = p.id AND a.fecha BETWEEN %s AND %s
             LEFT JOIN permisos perm
                 ON perm.personal_id = p.id AND perm.fecha BETWEEN %s AND %s
             GROUP BY p.id
+            ORDER BY p.id
         """, (inicio, fin, inicio, fin))
         registros = cursor.fetchall()
 
         for r in registros:
             reporte.append({
+                'id': r['id'],
                 'nombre': r['nombre'],
                 'apellido_p': r['apellido_p'],
                 'apellido_m': r['apellido_m'],
+                'puesto': r['puesto'] or 'No especificado',
                 'dias_asistidos': r['dias_asistidos'] or 0,
-                'horas_extra': round(r['horas_extra'],2) if r['horas_extra'] else 0,
+                'horas_extra': round(r['horas_extra'], 2) if r['horas_extra'] else 0,
                 'permisos': r['permisos'] or 0
             })
 
@@ -695,46 +716,93 @@ def generar_reporte():
     # --------------------------------------------------------------------------
     if exportar_pdf and tipo_reporte in ('quincenal', 'mensual'):
         buffer = BytesIO()
-        p = canvas.Canvas(buffer, pagesize=letter)
+        doc = SimpleDocTemplate(buffer, pagesize=letter, leftMargin=40, rightMargin=40, topMargin=80, bottomMargin=50)
+        styles = getSampleStyleSheet()
+        story = []
 
-        # Logos
-        try:
-            p.drawImage('static/img/escudomx.png', 50, 705, width=80, height=70)
-            p.drawImage('static/img/Logousila2.png', 470, 705, width=80, height=70)
-        except:
-            pass 
+        # Logos y encabezado centrado
+        logo_izq = 'static/img/escudomx.png'
+        logo_der = 'static/img/Logousila2.png'
+
+        encabezado = [
+            [Image(logo_izq, width=1*inch, height=1*inch),
+             Paragraph("<b>H. AYUNTAMIENTO CONSTITUCIONAL<br/>SAN FELIPE USILA, OAXACA 2025 – 2027</b>",
+                       ParagraphStyle('encabezado', alignment=1, fontSize=10)),
+             Image(logo_der, width=1*inch, height=1*inch)]
+        ]
+        tabla_encabezado = Table(encabezado, colWidths=[1.5*inch, 4*inch, 1.5*inch])
+        tabla_encabezado.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'MIDDLE')]))
+        story.append(tabla_encabezado)
+        story.append(Spacer(1, 5))
+
+        # Fecha de emisión
+        fecha_emision = datetime.now().strftime("%d/%m/%Y")
+        story.append(Paragraph(f"<b>Fecha de emisión:</b> {fecha_emision}",
+                               ParagraphStyle('fecha', alignment=2, fontSize=9)))
+        story.append(Spacer(1, 10))
 
         # Título
+        mes_nombre = calendar.month_name[mes].capitalize()
         if tipo_reporte == 'quincenal':
-            titulo = f"Reporte Quincenal {'1-15' if quincena == 1 else '16-fin'} de {mes}/{year}"
+            titulo_texto = f"Reporte Quincenal del {'1 al 15' if quincena == 1 else '16 al fin'} de {mes_nombre} de {year}"
+            total_dias_periodo = 15 if quincena == 1 else calendar.monthrange(year, mes)[1] - 15
         else:
-            titulo = f"Reporte Mensual de {mes}/{year}"
+            titulo_texto = f"Reporte Mensual de {mes_nombre} de {year}"
+            total_dias_periodo = calendar.monthrange(year, mes)[1]
 
-        p.setFont("Helvetica-Bold", 14)
-        p.drawString(200, 720, titulo)
-        p.setFont("Helvetica", 11)
-        y = 680
+        story.append(Paragraph(f"<b>{titulo_texto}</b>", ParagraphStyle('titulo', fontSize=14, alignment=1, spaceAfter=12)))
 
-        # Encabezados
-        p.drawString(70, y, "Empleado")
-        p.drawString(250, y, "Días asistidos")
-        p.drawString(450, y, "Horas extra")
-        y -= 20
+        # Tabla de datos
+        encabezados = ["ID", "Empleado", "Puesto / Departamento", "Días Presentes", "Días Ausentes", "Días con Permiso", "% Asistencia"]
+        datos_tabla = [encabezados]
 
-        # Contenido
         for r in reporte:
             nombre_completo = f"{r['nombre']} {r['apellido_p']} {r['apellido_m']}"
-            p.drawString(70, y, nombre_completo)
-            p.drawString(250, y, str(r['dias_asistidos']))
-            p.drawString(450, y, str(r['horas_extra']))
-            y -= 18
+            dias_presentes = r.get('dias_asistidos', 0)
+            dias_permiso = r.get('permisos', 0)
+            dias_ausentes = total_dias_periodo - dias_presentes - dias_permiso
+            porcentaje = round(((dias_presentes + dias_permiso) / total_dias_periodo) * 100, 2) if total_dias_periodo > 0 else 0
 
-            if y < 60:
-                p.showPage()
-                y = 750
+            fila = [
+                r.get('id', 'N/A'),
+                nombre_completo,
+                r.get('puesto', 'N/A'),
+                dias_presentes,
+                dias_ausentes,
+                dias_permiso,
+                f"{porcentaje} %"
+            ]
+            datos_tabla.append(fila)
 
-        p.save()
+        tabla = Table(datos_tabla, colWidths=[0.6*inch, 1.8*inch, 1.8*inch, 1*inch, 1*inch, 1.2*inch, 1*inch])
+        tabla.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ]))
+        story.append(tabla)
+        story.append(Spacer(1, 20))
+
+        # Pie
+        story.append(Spacer(1, 400))
+        story.append(Paragraph(
+            "<i>Documento confidencial. Contiene información sensible del personal del H. Ayuntamiento de San Felipe Usila.</i>",
+            ParagraphStyle('confidencial', alignment=1, fontSize=8)
+        ))
+
+        def pie_pagina(canvas, doc):
+            canvas.saveState()
+            canvas.setFont('Helvetica', 8)
+            canvas.drawString(40, 30, f"Página {doc.page}")
+            canvas.restoreState()
+
+        doc.build(story, onFirstPage=pie_pagina, onLaterPages=pie_pagina)
         buffer.seek(0)
+        
         return send_file(
             buffer,
             as_attachment=True,
@@ -743,7 +811,7 @@ def generar_reporte():
         )
 
     # --------------------------------------------------------------------------
-    # --- Renderizado normal ---
+    # --- Render normal de la página ---
     # --------------------------------------------------------------------------
     return render_template(
         "generar_reporte.html",
@@ -756,52 +824,49 @@ def generar_reporte():
         calendar=calendar
     )
 
-# ---------------------------------------------
-# ACTUALIZAR REGISTRO DESDE generar_reporte.html
-# ---------------------------------------------
-@app.route('/actualizar_asistencia', methods=["POST"])
+
+# -------------------------------------------------------------
+# Ruta separada: actualizar asistencia desde el calendario diario
+# -------------------------------------------------------------
+@app.route('/actualizar_asistencia', methods=['POST'])
 def actualizar_asistencia():
+    id = request.form.get('id')
+    fecha = request.form.get('fecha')
+    entrada_manana = request.form.get('entrada_manana') or None
+    salida_comida = request.form.get('salida_comida') or None
+    entrada_tarde = request.form.get('entrada_tarde') or None
+    salida_tarde = request.form.get('salida_tarde') or None
+    horas_extra = request.form.get('horas_extra') or 0
+
     try:
-        id_personal = request.form['id']
-        fecha = request.form.get('fecha', datetime.now().date())
-        entrada_manana = request.form.get('entrada_manana', '').strip()
-        salida_comida = request.form.get('salida_comida', '').strip()
-        entrada_tarde = request.form.get('entrada_tarde', '').strip()
-        salida_tarde = request.form.get('salida_tarde', '').strip()
-        hora_extra = request.form.get('hora_extra', '').strip()
+        # Verificar si ya existe registro
+        cursor.execute("SELECT id FROM asistencia WHERE personal_id = %s AND fecha = %s", (id, fecha))
+        existe = cursor.fetchone()
 
-        modificaciones_realizadas = False 
-
-        cursor.execute("SELECT * FROM asistencia WHERE personal_id=%s AND fecha=%s", (id_personal, fecha))
-        registro = cursor.fetchone()
-
-        if registro:
-            # Actualizar
+        if existe:
+            # Actualizar asistencia existente
             cursor.execute("""
                 UPDATE asistencia
-                SET hora_entrada=%s, salida_comida=%s, entrada_tarde=%s, hora_salida=%s, hora_extra=%s
-                WHERE personal_id=%s AND fecha=%s
-            """, (entrada_manana or None, salida_comida or None, entrada_tarde or None, salida_tarde or None, hora_extra or None, id_personal, fecha))
-            modificaciones_realizadas = True
+                SET hora_entrada = %s,
+                    salida_comida = %s,
+                    entrada_tarde = %s,
+                    hora_salida = %s,
+                    hora_extra = %s
+                WHERE personal_id = %s AND fecha = %s
+            """, (entrada_manana, salida_comida, entrada_tarde, salida_tarde, horas_extra, id, fecha))
         else:
-            # Insertar nuevo
+            # Crear nuevo registro si no existe
             cursor.execute("""
                 INSERT INTO asistencia (personal_id, fecha, hora_entrada, salida_comida, entrada_tarde, hora_salida, hora_extra)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (id_personal, fecha, entrada_manana or None, salida_comida or None, entrada_tarde or None, salida_tarde or None, hora_extra or None))
-            modificaciones_realizadas = True
+            """, (id, fecha, entrada_manana, salida_comida, entrada_tarde, salida_tarde, horas_extra))
 
-        if modificaciones_realizadas:
-            db.commit()
-            return jsonify({"status": "success", "message": "Registro actualizado correctamente."})
-        else:
-            return jsonify({"status": "success", "message": "No hubo cambios."})
+        db.commit()
+        return jsonify({'status': 'success', 'message': 'Asistencia guardada correctamente.'})
 
     except Exception as e:
         db.rollback()
-        print(f"Error crítico en actualizar_asistencia: {e}")
-        return jsonify({"status": "error", "message": str(e)})
-
+        return jsonify({'status': 'error', 'message': str(e)})
 
 
 # -------------------------------
