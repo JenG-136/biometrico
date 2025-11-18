@@ -10,28 +10,15 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
   <style>
-    body {
-      background: url("{{ url_for('static', filename='img/5447586.jpg') }}") no-repeat center center fixed;
-      background-size: cover;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Poppins', sans-serif;
-    }
-
-    /* Botón administrador esquina izquierda-abajo */
-    #btn-admin {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      background-color: #28a745; /* verde */
-      color: white;
-      border: none;
-    }
-    #btn-admin i {
-      margin-right: 5px;
-    }
+      body {
+        background: url("{{ url_for('static', filename='img/5447586.jpg') }}") no-repeat center center fixed;
+        background-size: cover;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Poppins', sans-serif;
+      }
   </style>
 </head>
 <body>
@@ -48,18 +35,23 @@
 
     <div class="datetime" id="fecha-hora"></div>
 
-    <main style="text-align:center;">
-      <h3>Coloque su huella</h3>
-      <div id="lector" onclick="simularHuella()">
-        <i class="bi bi-fingerprint" style="font-size:60px; color:#161716;"></i>
-      </div>
-      <div id="mensaje"></div>
+    <!-- Contenedor del lector y tarjeta juntos (misma fila) -->
+    <div class="lector-container">
+      <main>
+        <h3>Coloque su huella</h3>
+        <div id="lector" onclick="simularHuella()">
+          <i class="bi bi-fingerprint" style="font-size:60px; color:#161716;"></i>
+        </div>
+        <div id="mensaje"></div>
+      </main>
 
-      <div class="resultado-container" id="resultado" style="display:none;">
+      <!-- Tarjeta resultado -->
+      <div class="resultado-container" id="resultado">
         <div class="empleado-foto">
           <img id="foto-empleado" src="" alt="Foto del empleado">
         </div>
         <div class="empleado-datos">
+          <h4 class="bienvenido">¡BIENVENIDO!</h4>
           <p><strong>Nombre:</strong> <span id="nombre-empleado"></span></p>
           <p><strong>Puesto:</strong> <span id="puesto-empleado"></span></p>
           <p><strong>Entrada:</strong> <span id="hora-entrada"></span></p>
@@ -67,27 +59,25 @@
           <p><strong>Retraso:</strong> <span id="retraso"></span></p>
         </div>
       </div>
-    </main>
+    </div>
 
     <footer>
       © 2025 H. Ayuntamiento de San Felipe Usila, Oaxaca
     </footer>
 
-    <!-- Botón administrador esquina izquierda-abajo -->
     <button id="btn-admin" class="btn" onclick="abrirModalAdmin()">
       <i class="bi bi-gear-fill"></i> Administrador
     </button>
   </div>
 
-  <!-- Modal para administrador -->
+  <!-- Modal administrador -->
   <div class="modal fade" id="adminModal" tabindex="-1" aria-labelledby="adminModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <form method="POST" action="{{ url_for('admin_access_post') }}">
-
           <div class="modal-header">
-            <h5 class="modal-title" id="adminModalLabel">Acceso Administrador</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            <h5 class="modal-title">Acceso Administrador</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
             <input type="password" name="password" class="form-control mb-2" placeholder="Contraseña" id="password-admin" required>
@@ -101,7 +91,6 @@
     </div>
   </div>
 
-  <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
@@ -125,13 +114,11 @@
       modal.show();
     }
 
-    // Limpiar contraseña automáticamente al cerrar el modal
     const adminModalEl = document.getElementById('adminModal');
-    adminModalEl.addEventListener('hidden.bs.modal', function () {
+    adminModalEl.addEventListener('hidden.bs.modal', () => {
       document.getElementById('password-admin').value = '';
     });
 
-    // Simulación de huella
     function simularHuella() {
       const lector = document.getElementById("lector");
       const mensaje = document.getElementById("mensaje");
@@ -158,6 +145,7 @@
         lector.style.background = "green";
         mensaje.innerText = "Huella reconocida";
         resultado.style.display = "flex";
+        resultado.classList.add("mostrar");
 
         document.getElementById("nombre-empleado").innerText = data.nombre;
         document.getElementById("puesto-empleado").innerText = data.puesto;
@@ -172,6 +160,14 @@
         } else {
           document.getElementById("hora-salida").innerText = horaActual;
         }
+
+        //Ocultar resultados después de 3 segundos
+        setTimeout(() => {
+          resultado.classList.remove("mostrar");
+          lector.style.background = "rgba(100, 100, 100, 0.3)";
+          mensaje.innerText = "Coloca tu huella para registrar asistencia";
+          setTimeout(() => resultado.style.display = "none", 500);
+        }, 3000);
       })
       .catch(err => {
         console.error(err);
@@ -180,6 +176,5 @@
       });
     }
   </script>
-
 </body>
 </html>

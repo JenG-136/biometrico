@@ -13,17 +13,14 @@ import calendar
 from collections import defaultdict
 import calendar
 from datetime import datetime, date, timedelta
-
-
-#---------------------------
+from flask import Response
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 #------------------------------------------------------------------------
 
-from flask import Response
+
 
 
 # -------------------------------
@@ -186,7 +183,7 @@ def admin_access():
             return redirect(url_for('ver_personal'))
         else:
             flash("Acción no reconocida.", "danger")
-            return redirect(url_for('admin_index'))  # <-- aquí
+            return redirect(url_for('admin_index'))  
     else:
         flash("Contraseña incorrecta.", "danger")
         return redirect(url_for('inicio'))
@@ -458,7 +455,7 @@ def ver_registros():
 
 
 # -------------------------------
-# Editar registro de asistencia (solo horas normales)
+# Editar registro de asistencia
 # -------------------------------
 @app.route('/editar_registro', methods=["POST"])
 def editar_registro():

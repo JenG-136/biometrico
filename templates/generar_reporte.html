@@ -249,13 +249,32 @@
             const empleado = empleadosPorFecha[fecha].find(e=>e.id==id);
             if(!empleado) return;
 
-            document.getElementById('editId').value = id;
-            document.getElementById('editFecha').value = fecha;
-            document.getElementById('entrada_manana').value = empleado.entrada_manana !== '-' ? empleado.entrada_manana : '';
-            document.getElementById('salida_comida').value = empleado.salida_comida !== '-' ? empleado.salida_comida : '';
-            document.getElementById('entrada_tarde').value = empleado.entrada_tarde !== '-' ? empleado.entrada_tarde : '';
-            document.getElementById('salida_tarde').value = empleado.salida_tarde !== '-' ? empleado.salida_tarde : '';
-            document.getElementById('horas_extra').value = empleado.horas_extra;
+function formatearHora(hora){
+    if(!hora || hora === '-' || hora.length < 5) return '';
+
+    // Convertir hora como "9:32:13" a "09:32:13"
+    let partes = hora.split(':');
+    if(partes.length >= 2){
+        let h = partes[0].padStart(2,'0');
+        let m = partes[1].padStart(2,'0');
+        let s = partes[2] ? partes[2].padStart(2,'0') : '00';
+        return `${h}:${m}:${s}`;
+    }
+    return '';
+}
+
+document.getElementById('editId').value = id;
+document.getElementById('editFecha').value = fecha;
+
+document.getElementById('entrada_manana').value = formatearHora(empleado.entrada_manana);
+document.getElementById('salida_comida').value = formatearHora(empleado.salida_comida);
+document.getElementById('entrada_tarde').value = formatearHora(empleado.entrada_tarde);
+document.getElementById('salida_tarde').value = formatearHora(empleado.salida_tarde);
+
+document.getElementById('horas_extra').value = empleado.horas_extra;
+
+
+
 
             document.getElementById('tituloEditar').innerText = 'Editar asistencia de ' + empleado.nombre_completo + ' (' + fecha + ')';
             document.getElementById('modalEditar').style.display = 'block';
